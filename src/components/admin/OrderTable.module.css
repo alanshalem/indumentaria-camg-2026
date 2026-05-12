@@ -1,0 +1,102 @@
+.tableWrap {
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  min-width: 720px;
+}
+
+.table thead th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.row:hover td { background: rgba(220, 20, 60, 0.04); }
+
+.right { text-align: right; }
+
+.code {
+  font-family: 'Menlo', 'Consolas', monospace;
+  color: var(--color-red-bright);
+  font-weight: 700;
+}
+
+.statusPill {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.pending {
+  background: rgba(220, 20, 60, 0.15);
+  color: var(--color-red-bright);
+  border: 1px solid var(--color-red);
+}
+.delivered {
+  background: rgba(40, 200, 120, 0.14);
+  color: #6be3a3;
+  border: 1px solid #2c9d63;
+}
+
+.expand {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  color: var(--color-text);
+}
+.expand:hover { border-color: var(--color-red); color: var(--color-red-bright); }
+
+.detailRow td {
+  background: var(--color-bg);
+  padding: 12px 16px 18px;
+}
+
+.detailList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.detailList li {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 0.9rem;
+}
+.itemQty { font-weight: 800; color: var(--color-red-bright); }
+.itemName { color: var(--color-white); font-weight: 600; }
+.itemMeta { color: var(--color-muted); font-size: 0.84rem; }
+.itemPrice { color: var(--color-white); font-weight: 700; }
+
+.empty {
+  text-align: center;
+  color: var(--color-muted);
+  padding: 32px;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}

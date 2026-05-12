@@ -1,0 +1,311 @@
+📋 Especificación de Proyecto: Sistema de Pedidos de Indumentaria - Club Atlético Monte Grande
+🎯 Objetivo
+Crear una aplicación web para que los socios del Club Atlético Monte Grande realicen pedidos de indumentaria deportiva sin necesidad de backend complejo.
+
+🛠 Stack Tecnológico
+Frontend
+
+React 18+ con Vite
+CSS Modules para estilos aislados
+React Router para navegación
+Zustand o Context API para state management
+LocalStorage para persistencia de pedidos
+
+Backend (Opcional/Mínimo)
+
+Vercel Serverless Functions (si es necesario para CAPTCHA o almacenamiento)
+Alternativamente: Todo en cliente con localStorage/indexedDB
+
+Hosting
+
+Vercel (deployment directo desde Git)
+
+
+🎨 Identidad Visual
+Colores del Club
+
+Rojo principal: #DC143C o similar (extraer del Instagram)
+Negro: #1a1a1a
+Blanco: #ffffff
+Grises: para backgrounds y textos secundarios
+
+Referencia
+
+Instagram: @clubatleticomontegrande
+Usar logos e imágenes oficiales del club
+
+
+📦 Funcionalidades Principales
+🔴 Para los Socios (Página Pública)
+1. Catálogo de Productos
+- Mostrar productos de indumentaria con:
+  ✓ Imagen del producto
+  ✓ Nombre/descripción
+  ✓ Talles disponibles (S, M, L, XL, XXL, etc.)
+  ✓ Colores disponibles (chips visuales)
+  ✓ Botón "Agregar al carrito"
+2. Carrito de Compras
+- Vista lateral/modal con:
+  ✓ Lista de productos agregados
+  ✓ Talle y color seleccionado por producto
+  ✓ Cantidad de cada item
+  ✓ Botón para eliminar items
+  ✓ Total de productos
+3. Checkout / Generación de Pedido
+Formulario simple:
+  ✓ Nombre
+  ✓ Apellido
+  ✓ Botón "Generar Pedido"
+
+Al presionar:
+  1. Generar código único (ej: "CAMG-2024-00123")
+  2. Guardar pedido en localStorage con:
+     - Código
+     - Fecha y hora
+     - Nombre y apellido
+     - Items del carrito
+  3. Mostrar pantalla de confirmación con el código
+  4. Guardar código en cookie/localStorage con duración máxima
+4. Recuperación de Código
+- Al volver a ingresar:
+  ✓ Detectar si hay código guardado
+  ✓ Mostrar banner/modal con el código del último pedido
+  ✓ Indicar fecha del pedido
+  ✓ Permitir hacer un nuevo pedido sin perder el anterior
+
+⚫ Para Administradores (Dashboard Oculto)
+1. Autenticación /login
+- URL oculta: /login
+- Clave maestra (hardcodeada o en env)
+- CAPTCHA simple (puede ser:
+  ✓ hCaptcha
+  ✓ reCAPTCHA
+  ✓ Un simple "cuánto es 5+3?" si no quieres servicios externos)
+- Session temporal guardada en sessionStorage
+2. Dashboard de Pedidos
+Vista de tabla/lista con:
+  ✓ Código de pedido
+  ✓ Fecha y hora
+  ✓ Nombre y apellido del socio
+  ✓ Detalle de productos (expandible)
+  ✓ Estado (opcional: pendiente/entregado)
+  ✓ Filtros por fecha/nombre
+  ✓ Búsqueda por código
+
+🗂 Estructura de Datos
+Producto
+typescriptinterface Product {
+  id: string;
+  name: string;
+  image: string;
+  sizes: string[]; // ["S", "M", "L", "XL"]
+  colors: string[]; // ["Rojo", "Negro", "Blanco"]
+  price?: number; // Opcional si no manejas precios
+}
+Item del Carrito
+typescriptinterface CartItem {
+  productId: string;
+  productName: string;
+  size: string;
+  color: string;
+  quantity: number;
+}
+Pedido
+typescriptinterface Order {
+  code: string; // "CAMG-2024-00123"
+  timestamp: number;
+  customerName: string;
+  customerLastName: string;
+  items: CartItem[];
+  status?: "pending" | "delivered"; // Opcional
+}
+
+🗄 Persistencia de Datos
+LocalStorage
+javascript// Todos los pedidos (para el admin)
+localStorage.setItem('camg_orders', JSON.stringify(orders));
+
+// Último código del usuario (para recuperación)
+localStorage.setItem('camg_last_order_code', 'CAMG-2024-00123');
+localStorage.setItem('camg_last_order_date', Date.now());
+Duración de Cookies (Alternativa)
+javascript// Cookie con expiración máxima (1 año)
+document.cookie = `camg_order_code=CAMG-2024-00123; max-age=31536000; path=/`;
+
+🎨 Diseño y UX
+Página Principal (Socios)
+
+Header: Logo del club + carrito flotante
+Hero Section: Frase motivacional + imagen del club
+Catálogo: Grid responsive de productos
+Footer: Redes sociales + info del club
+
+Página de Admin
+
+Login: Centrado, minimalista
+Dashboard: Tabla limpia con buscador
+Detalle de pedido: Modal o vista expandida
+
+Responsive
+
+Mobile-first
+Breakpoints: 640px, 768px, 1024px
+Carrito como drawer en mobile, sidebar en desktop
+
+
+🔒 Seguridad
+Autenticación Admin
+javascript// En .env.local (Vercel)
+VITE_ADMIN_PASSWORD=TuClaveSegura123
+
+// Validación simple en cliente
+if (inputPassword === import.meta.env.VITE_ADMIN_PASSWORD) {
+  sessionStorage.setItem('camg_admin', 'true');
+}
+CAPTCHA
+
+Opción 1: hCaptcha (gratuito, privacy-friendly)
+Opción 2: Simple pregunta matemática client-side
+Opción 3: reCAPTCHA v3 (invisible)
+
+URL Oculta
+
+No enlazar /login desde ninguna parte
+Opcional: agregar rate limiting básico
+
+
+📁 Estructura de Carpetas Sugerida
+src/
+├── components/
+│   ├── layout/
+│   │   ├── Header.jsx
+│   │   ├── Footer.jsx
+│   │   └── Layout.jsx
+│   ├── products/
+│   │   ├── ProductCard.jsx
+│   │   ├── ProductGrid.jsx
+│   │   └── ProductModal.jsx
+│   ├── cart/
+│   │   ├── Cart.jsx
+│   │   ├── CartItem.jsx
+│   │   └── CartDrawer.jsx
+│   ├── checkout/
+│   │   ├── CheckoutForm.jsx
+│   │   └── OrderConfirmation.jsx
+│   └── admin/
+│       ├── LoginForm.jsx
+│       ├── Dashboard.jsx
+│       └── OrderTable.jsx
+├── hooks/
+│   ├── useCart.js
+│   ├── useOrders.js
+│   └── useAuth.js
+├── data/
+│   └── products.js (hardcoded products)
+├── utils/
+│   ├── generateOrderCode.js
+│   ├── storage.js
+│   └── formatters.js
+├── styles/
+│   └── (CSS Modules por componente)
+└── pages/
+    ├── Home.jsx
+    ├── Login.jsx
+    └── AdminDashboard.jsx
+
+🚀 Roadmap de Desarrollo
+Fase 1: Setup y Catálogo (Día 1-2)
+
+ Crear proyecto Vite + React
+ Configurar CSS Modules
+ Crear componentes de layout
+ Hardcodear productos en data/products.js
+ Implementar ProductGrid y ProductCard
+
+Fase 2: Carrito y Checkout (Día 3)
+
+ Hook useCart con Context/Zustand
+ Componente Cart con add/remove/update
+ Formulario de checkout
+ Generación de código único
+ Persistencia en localStorage
+
+Fase 3: Confirmación y Recuperación (Día 4)
+
+ Pantalla de confirmación con código
+ Lógica de recuperación al volver
+ Banner/modal con último pedido
+
+Fase 4: Panel Admin (Día 5)
+
+ Ruta /login con clave maestra
+ CAPTCHA integrado
+ Dashboard con tabla de pedidos
+ Filtros y búsqueda
+
+Fase 5: Diseño y Polish (Día 6-7)
+
+ Aplicar colores del club
+ Responsive design
+ Animaciones y transiciones
+ Testing manual exhaustivo
+ Deploy a Vercel
+
+
+📝 Notas Importantes
+⚠️ Limitaciones sin Backend
+✓ Los pedidos solo existen en localStorage del navegador
+✓ Si el admin limpia el navegador, pierde los datos
+✓ No hay sincronización entre dispositivos
+✓ Para persistencia real, considerar:
+  - Vercel Postgres (free tier)
+  - Supabase (gratuito hasta cierto punto)
+  - Google Sheets API (hacky pero funcional)
+
+  API
+
+
+🎯 Criterios de Éxito
+
+✅ Usuario puede agregar productos al carrito con talle/color
+✅ Usuario puede generar pedido con nombre/apellido
+✅ Código se guarda y recupera al volver
+✅ Admin puede entrar por /login con clave
+✅ Admin ve todos los pedidos en dashboard
+✅ Diseño respeta colores del club (rojo/negro)
+✅ Funciona 100% en Vercel sin configuración extra
+
+# En tu terminal, desde la carpeta donde quieres el proyecto:orage, y panel admin con login protegido en /login. Colores del club: rojo (#DC143C) y negro. Sin backend externo, solo cliente."
+
+Chequea tambien en las imagenes, busca las que tengo para mostrar en los productos.
+Tambien tengo el logo, quiero que el fondo de la pagina sea negro.
+
+Esto son los productos y los talles que tengo
+Campera con cierre y capucha original del club
+Del talle 8 al talle XXXL
+$50.000
+
+CAMPERA CON MEDIO CIERRE 
+del talle 8 al XXXL
+$40.000
+
+REMERAS DE ALGODÓN CAMG
+Del talle 8 al XXXL
+$25.000
+
+MEDIAS 3/4 ideal para el deporte 
+Talles del 38 al 42 y 42 a 50
+$4.000
+
+PANTALÓN JOGGINS 
+Todo los talles
+$40.000
+
+MUSCULOSA DE ENTRENAMIENTO 
+Todo los talles
+$20.000
+
+INDUMENTARIA DE JUEGO 
+todo los talles
+2 musculosas y 2 pantalones 
+$70.000

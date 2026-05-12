@@ -1,0 +1,44 @@
+.banner {
+  background: linear-gradient(90deg, var(--color-red-dark), var(--color-red));
+  color: var(--color-white);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  gap: 12px;
+}
+
+.text {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+.label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  opacity: 0.85;
+}
+.code {
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.date { opacity: 0.85; font-size: 0.85rem; }
+
+.dismiss {
+  width: 28px;
+  height: 28px;
+  font-size: 1.4rem;
+  color: var(--color-white);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dismiss:hover { background: rgba(0,0,0,0.25); }
