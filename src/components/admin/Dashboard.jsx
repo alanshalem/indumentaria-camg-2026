@@ -57,7 +57,7 @@ export default function Dashboard() {
       o.code,
       new Date(o.timestamp).toISOString(),
       `${o.customerName} ${o.customerLastName}`,
-      o.items.map(i => `${i.quantity}x ${i.productName} (${i.size}/${i.color})`).join(' | '),
+      o.items.map(i => `${i.quantity}x ${i.productName} (${i.size})`).join(' | '),
       o.total || 0,
       o.status || 'pending',
     ]);

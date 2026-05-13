@@ -1,0 +1,282 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link "Club Atlético Monte Grande Club Atlético Monte Grande" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - img "Club Atlético Monte Grande" [ref=e7]
+        - generic [ref=e8]:
+          - generic [ref=e9]: Club Atlético
+          - generic [ref=e10]: Monte Grande
+      - button "Abrir carrito (1 items)" [ref=e505] [cursor=pointer]:
+        - img [ref=e12]
+        - generic [ref=e506]: "1"
+  - main [ref=e14]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: Temporada 2026
+      - heading "Indumentaria oficial Club Atlético Monte Grande" [level=1] [ref=e19]:
+        - text: Indumentaria oficial
+        - text: Club Atlético Monte Grande
+      - paragraph [ref=e20]: Llevá los colores del club. Pedidos online para socios, retiro en sede.
+      - link "Ver catálogo" [ref=e21] [cursor=pointer]:
+        - /url: "#catalogo"
+    - generic [ref=e270]:
+      - generic [ref=e271]:
+        - generic [ref=e272]: Guía de talles
+        - heading "Encontrá tu talle" [level=2] [ref=e273]
+        - paragraph [ref=e274]: Consultá las medidas antes de elegir.
+      - generic [ref=e275]:
+        - figure "Joggings" [ref=e276]:
+          - img "Guía de talles - Joggings" [ref=e277]
+          - generic [ref=e278]: Joggings
+        - figure "Buzos y camperas" [ref=e279]:
+          - img "Guía de talles - Buzos y camperas" [ref=e280]
+          - generic [ref=e281]: Buzos y camperas
+    - generic [ref=e283]:
+      - generic [ref=e284]:
+        - generic [ref=e285]: Catálogo 2026
+        - heading "Indumentaria oficial CAMG" [level=2] [ref=e286]
+        - paragraph [ref=e287]: Elegí tu talle y color. Generá tu pedido en un minuto.
+      - generic [ref=e288]:
+        - article [ref=e289]:
+          - img "Campera con cierre y capucha" [ref=e291]
+          - generic [ref=e292]:
+            - heading "Campera con cierre y capucha" [level=3] [ref=e293]
+            - paragraph [ref=e294]: Original del club. Abrigada, con capucha y cierre completo.
+            - paragraph [ref=e295]: $ 50.000
+            - generic [ref=e296]:
+              - generic [ref=e297]: Color
+              - generic [ref=e298]:
+                - button "Negro" [ref=e299] [cursor=pointer]
+                - button "Rojo" [ref=e300] [cursor=pointer]
+            - generic [ref=e301]:
+              - generic [ref=e302]: Talle
+              - generic [ref=e303]:
+                - button "8" [ref=e304] [cursor=pointer]
+                - button "10" [ref=e305] [cursor=pointer]
+                - button "12" [ref=e306] [cursor=pointer]
+                - button "14" [ref=e307] [cursor=pointer]
+                - button "16" [ref=e308] [cursor=pointer]
+                - button "S" [ref=e309] [cursor=pointer]
+                - button "M" [ref=e310] [cursor=pointer]
+                - button "L" [ref=e311] [cursor=pointer]
+                - button "XL" [ref=e312] [cursor=pointer]
+                - button "XXL" [ref=e313] [cursor=pointer]
+                - button "XXXL" [ref=e314] [cursor=pointer]
+            - generic [ref=e315]:
+              - generic [ref=e316]: Cantidad
+              - generic [ref=e317]:
+                - button "Restar" [ref=e318] [cursor=pointer]: −
+                - generic [ref=e319]: "1"
+                - button "Sumar" [ref=e320] [cursor=pointer]: +
+            - button "✓ Agregado" [active] [ref=e507] [cursor=pointer]
+        - article [ref=e322]:
+          - generic [ref=e323]:
+            - img "Campera con medio cierre" [ref=e324]
+            - generic [ref=e325]:
+              - button "Imagen 1" [ref=e326] [cursor=pointer]
+              - button "Imagen 2" [ref=e327] [cursor=pointer]
+              - button "Imagen 3" [ref=e328] [cursor=pointer]
+              - button "Imagen 4" [ref=e329] [cursor=pointer]
+              - button "Imagen 5" [ref=e330] [cursor=pointer]
+          - generic [ref=e331]:
+            - heading "Campera con medio cierre" [level=3] [ref=e332]
+            - paragraph [ref=e333]: Campera con medio cierre, ideal para entrenamiento.
+            - paragraph [ref=e334]: $ 40.000
+            - generic [ref=e335]:
+              - generic [ref=e336]: Color
+              - generic [ref=e337]:
+                - button "Negro" [ref=e338] [cursor=pointer]
+                - button "Rojo" [ref=e339] [cursor=pointer]
+            - generic [ref=e340]:
+              - generic [ref=e341]: Talle
+              - generic [ref=e342]:
+                - button "8" [ref=e343] [cursor=pointer]
+                - button "10" [ref=e344] [cursor=pointer]
+                - button "12" [ref=e345] [cursor=pointer]
+                - button "14" [ref=e346] [cursor=pointer]
+                - button "16" [ref=e347] [cursor=pointer]
+                - button "S" [ref=e348] [cursor=pointer]
+                - button "M" [ref=e349] [cursor=pointer]
+                - button "L" [ref=e350] [cursor=pointer]
+                - button "XL" [ref=e351] [cursor=pointer]
+                - button "XXL" [ref=e352] [cursor=pointer]
+                - button "XXXL" [ref=e353] [cursor=pointer]
+            - generic [ref=e354]:
+              - generic [ref=e355]: Cantidad
+              - generic [ref=e356]:
+                - button "Restar" [ref=e357] [cursor=pointer]: −
+                - generic [ref=e358]: "1"
+                - button "Sumar" [ref=e359] [cursor=pointer]: +
+            - button "Agregar al carrito" [ref=e360] [cursor=pointer]
+        - article [ref=e361]:
+          - img "Remera de algodón CAMG" [ref=e363]
+          - generic [ref=e364]:
+            - heading "Remera de algodón CAMG" [level=3] [ref=e365]
+            - paragraph [ref=e366]: Remera oficial 100% algodón con logo del club.
+            - paragraph [ref=e367]: $ 25.000
+            - generic [ref=e368]:
+              - generic [ref=e369]: Color
+              - generic [ref=e370]:
+                - button "Negro" [ref=e371] [cursor=pointer]
+                - button "Rojo" [ref=e372] [cursor=pointer]
+                - button "Blanco" [ref=e373] [cursor=pointer]
+            - generic [ref=e374]:
+              - generic [ref=e375]: Talle
+              - generic [ref=e376]:
+                - button "8" [ref=e377] [cursor=pointer]
+                - button "10" [ref=e378] [cursor=pointer]
+                - button "12" [ref=e379] [cursor=pointer]
+                - button "14" [ref=e380] [cursor=pointer]
+                - button "16" [ref=e381] [cursor=pointer]
+                - button "S" [ref=e382] [cursor=pointer]
+                - button "M" [ref=e383] [cursor=pointer]
+                - button "L" [ref=e384] [cursor=pointer]
+                - button "XL" [ref=e385] [cursor=pointer]
+                - button "XXL" [ref=e386] [cursor=pointer]
+                - button "XXXL" [ref=e387] [cursor=pointer]
+            - generic [ref=e388]:
+              - generic [ref=e389]: Cantidad
+              - generic [ref=e390]:
+                - button "Restar" [ref=e391] [cursor=pointer]: −
+                - generic [ref=e392]: "1"
+                - button "Sumar" [ref=e393] [cursor=pointer]: +
+            - button "Agregar al carrito" [ref=e394] [cursor=pointer]
+        - article [ref=e395]:
+          - img "Medias 3/4 deportivas" [ref=e397]
+          - generic [ref=e398]:
+            - heading "Medias 3/4 deportivas" [level=3] [ref=e399]
+            - paragraph [ref=e400]: Medias 3/4, ideales para el deporte.
+            - paragraph [ref=e401]: $ 4.000
+            - generic [ref=e402]:
+              - generic [ref=e403]: Color
+              - generic [ref=e404]:
+                - button "Negro" [ref=e405] [cursor=pointer]
+                - button "Rojo" [ref=e406] [cursor=pointer]
+                - button "Blanco" [ref=e407] [cursor=pointer]
+            - generic [ref=e408]:
+              - generic [ref=e409]: Talle
+              - generic [ref=e410]:
+                - button "38-42" [ref=e411] [cursor=pointer]
+                - button "42-50" [ref=e412] [cursor=pointer]
+            - generic [ref=e413]:
+              - generic [ref=e414]: Cantidad
+              - generic [ref=e415]:
+                - button "Restar" [ref=e416] [cursor=pointer]: −
+                - generic [ref=e417]: "1"
+                - button "Sumar" [ref=e418] [cursor=pointer]: +
+            - button "Agregar al carrito" [ref=e419] [cursor=pointer]
+        - article [ref=e420]:
+          - img "Pantalón Jogging" [ref=e422]
+          - generic [ref=e423]:
+            - heading "Pantalón Jogging" [level=3] [ref=e424]
+            - paragraph [ref=e425]: Pantalón jogging cómodo para entrenar.
+            - paragraph [ref=e426]: $ 40.000
+            - generic [ref=e427]:
+              - generic [ref=e428]: Color
+              - button "Negro" [ref=e430] [cursor=pointer]
+            - generic [ref=e431]:
+              - generic [ref=e432]: Talle
+              - generic [ref=e433]:
+                - button "S" [ref=e434] [cursor=pointer]
+                - button "M" [ref=e435] [cursor=pointer]
+                - button "L" [ref=e436] [cursor=pointer]
+                - button "XL" [ref=e437] [cursor=pointer]
+                - button "XXL" [ref=e438] [cursor=pointer]
+                - button "XXXL" [ref=e439] [cursor=pointer]
+            - generic [ref=e440]:
+              - generic [ref=e441]: Cantidad
+              - generic [ref=e442]:
+                - button "Restar" [ref=e443] [cursor=pointer]: −
+                - generic [ref=e444]: "1"
+                - button "Sumar" [ref=e445] [cursor=pointer]: +
+            - button "Agregar al carrito" [ref=e446] [cursor=pointer]
+        - article [ref=e447]:
+          - generic [ref=e448]:
+            - img "Musculosa de entrenamiento" [ref=e449]
+            - generic [ref=e450]:
+              - button "Imagen 1" [ref=e451] [cursor=pointer]
+              - button "Imagen 2" [ref=e452] [cursor=pointer]
+          - generic [ref=e453]:
+            - heading "Musculosa de entrenamiento" [level=3] [ref=e454]
+            - paragraph [ref=e455]: Musculosa liviana para entrenamiento.
+            - paragraph [ref=e456]: $ 20.000
+            - generic [ref=e457]:
+              - generic [ref=e458]: Color
+              - generic [ref=e459]:
+                - button "Negro" [ref=e460] [cursor=pointer]
+                - button "Rojo" [ref=e461] [cursor=pointer]
+            - generic [ref=e462]:
+              - generic [ref=e463]: Talle
+              - generic [ref=e464]:
+                - button "S" [ref=e465] [cursor=pointer]
+                - button "M" [ref=e466] [cursor=pointer]
+                - button "L" [ref=e467] [cursor=pointer]
+                - button "XL" [ref=e468] [cursor=pointer]
+                - button "XXL" [ref=e469] [cursor=pointer]
+                - button "XXXL" [ref=e470] [cursor=pointer]
+            - generic [ref=e471]:
+              - generic [ref=e472]: Cantidad
+              - generic [ref=e473]:
+                - button "Restar" [ref=e474] [cursor=pointer]: −
+                - generic [ref=e475]: "1"
+                - button "Sumar" [ref=e476] [cursor=pointer]: +
+            - button "Agregar al carrito" [ref=e477] [cursor=pointer]
+        - article [ref=e478]:
+          - img "Indumentaria de juego (kit)" [ref=e480]
+          - generic [ref=e481]:
+            - heading "Indumentaria de juego (kit)" [level=3] [ref=e482]
+            - paragraph [ref=e483]: "Kit completo: 2 musculosas + 2 pantalones."
+            - paragraph [ref=e484]: $ 70.000
+            - generic [ref=e485]:
+              - generic [ref=e486]: Color
+              - button "Negro/Rojo" [ref=e488] [cursor=pointer]
+            - generic [ref=e489]:
+              - generic [ref=e490]: Talle
+              - generic [ref=e491]:
+                - button "S" [ref=e492] [cursor=pointer]
+                - button "M" [ref=e493] [cursor=pointer]
+                - button "L" [ref=e494] [cursor=pointer]
+                - button "XL" [ref=e495] [cursor=pointer]
+                - button "XXL" [ref=e496] [cursor=pointer]
+                - button "XXXL" [ref=e497] [cursor=pointer]
+            - generic [ref=e498]:
+              - generic [ref=e499]: Cantidad
+              - generic [ref=e500]:
+                - button "Restar" [ref=e501] [cursor=pointer]: −
+                - generic [ref=e502]: "1"
+                - button "Sumar" [ref=e503] [cursor=pointer]: +
+            - button "Agregar al carrito" [ref=e504] [cursor=pointer]
+  - contentinfo [ref=e246]:
+    - generic [ref=e247]:
+      - generic [ref=e249]:
+        - paragraph [ref=e250]: Club Atlético Monte Grande
+        - paragraph [ref=e251]: Indumentaria oficial · Temporada 2026
+      - link "@clubatleticomontegrande" [ref=e253] [cursor=pointer]:
+        - /url: https://instagram.com/clubatleticomontegrande
+        - img [ref=e254]
+        - text: "@clubatleticomontegrande"
+    - paragraph [ref=e258]: © 2026 CAMG. Todos los derechos reservados.
+  - dialog "Carrito" [ref=e259]:
+    - generic [ref=e260]:
+      - heading "Tu carrito(1)" [level=2] [ref=e509]:
+        - text: Tu carrito
+        - generic [ref=e510]: (1)
+      - button "Cerrar" [ref=e262] [cursor=pointer]:
+        - img [ref=e263]
+    - list [ref=e511]:
+      - listitem [ref=e512]:
+        - generic [ref=e513]:
+          - paragraph [ref=e514]: Campera con cierre y capucha
+          - paragraph [ref=e515]: Talle 8 · Negro
+          - paragraph [ref=e516]: $ 50.000
+          - generic [ref=e517]:
+            - generic [ref=e518]:
+              - button "Restar" [ref=e519] [cursor=pointer]: −
+              - generic [ref=e520]: "1"
+              - button "Sumar" [ref=e521] [cursor=pointer]: +
+            - button "Eliminar" [ref=e522] [cursor=pointer]
+    - generic [ref=e523]:
+      - generic [ref=e524]:
+        - generic [ref=e525]: Total
+        - generic [ref=e526]: $ 50.000
+      - button "Generar pedido" [ref=e527] [cursor=pointer]

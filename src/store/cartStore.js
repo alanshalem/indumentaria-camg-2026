@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 function lineKey(item) {
-  return `${item.productId}__${item.size}__${item.color}`;
+  return `${item.productId}__${item.size}`;
 }
 
 export const useCartStore = create(

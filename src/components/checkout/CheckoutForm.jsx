@@ -37,7 +37,6 @@ export default function CheckoutForm({ onBack, onComplete }) {
         productId: i.productId,
         productName: i.productName,
         size: i.size,
-        color: i.color,
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       })),

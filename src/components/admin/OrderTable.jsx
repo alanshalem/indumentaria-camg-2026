@@ -69,7 +69,7 @@ export default function OrderTable({ orders, onChange }) {
                           <li key={`${order.code}-${i}`}>
                             <span className={styles.itemQty}>{it.quantity}×</span>
                             <span className={styles.itemName}>{it.productName}</span>
-                            <span className={styles.itemMeta}>Talle {it.size} · {it.color}</span>
+                            <span className={styles.itemMeta}>Talle {it.size}</span>
                             {it.unitPrice != null && (
                               <span className={styles.itemPrice}>
                                 {formatPrice(it.unitPrice * it.quantity)}

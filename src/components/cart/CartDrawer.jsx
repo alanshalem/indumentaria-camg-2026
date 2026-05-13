@@ -74,7 +74,7 @@ export default function CartDrawer() {
                         <img src={item.image} alt="" className={styles.itemImg} />
                         <div className={styles.itemInfo}>
                           <p className={styles.itemName}>{item.productName}</p>
-                          <p className={styles.itemMeta}>Talle {item.size} · {item.color}</p>
+                          <p className={styles.itemMeta}>Talle {item.size}</p>
                           <p className={styles.itemPrice}>{formatPrice((item.unitPrice || 0) * item.quantity)}</p>
                           <div className={styles.itemActions}>
                             <div className={styles.qty}>

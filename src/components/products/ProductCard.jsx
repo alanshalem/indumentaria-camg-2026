@@ -3,16 +3,8 @@ import { useCartStore } from '../../store/cartStore.js';
 import { formatPrice } from '../../utils/formatters.js';
 import styles from './ProductCard.module.css';
 
-const COLOR_HEX = {
-  Negro: '#0e0e0e',
-  Rojo: '#DC143C',
-  Blanco: '#ffffff',
-  'Negro/Rojo': 'linear-gradient(135deg, #0e0e0e 50%, #DC143C 50%)',
-};
-
 export default function ProductCard({ product }) {
   const [size, setSize] = useState(product.sizes[0]);
-  const [color, setColor] = useState(product.colors[0]);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const addItem = useCartStore(s => s.addItem);
@@ -29,7 +21,6 @@ export default function ProductCard({ product }) {
       productId: product.id,
       productName: product.name,
       size,
-      color,
       quantity: qty,
       unitPrice: product.price,
       image: product.image,
@@ -63,23 +54,6 @@ export default function ProductCard({ product }) {
         <h3 className={styles.name}>{product.name}</h3>
         {product.description && <p className={styles.desc}>{product.description}</p>}
         <p className={styles.price}>{formatPrice(product.price)}</p>
-
-        <div className={styles.field}>
-          <label className={styles.label}>Color</label>
-          <div className={styles.colors}>
-            {product.colors.map(c => (
-              <button
-                key={c}
-                type="button"
-                className={`${styles.colorChip} ${c === color ? styles.colorActive : ''}`}
-                style={{ background: COLOR_HEX[c] || '#666' }}
-                onClick={() => setColor(c)}
-                aria-label={c}
-                title={c}
-              />
-            ))}
-          </div>
-        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>Talle</label>
