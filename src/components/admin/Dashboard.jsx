@@ -10,13 +10,17 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  function reload() {
-    setOrders(readOrders());
+  async function reload() {
+    setLoading(true);
+    const data = await readOrders();
+    setOrders(data);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -132,7 +136,11 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <OrderTable orders={filtered} onChange={reload} />
+      {loading ? (
+        <p className={styles.loading}>Cargando pedidos…</p>
+      ) : (
+        <OrderTable orders={filtered} onChange={reload} />
+      )}
     </div>
   );
 }

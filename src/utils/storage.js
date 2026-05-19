@@ -1,31 +1,55 @@
-const ORDERS_KEY = 'camg_orders';
+import { supabase } from '../lib/supabase.js';
+
 const LAST_CODE_KEY = 'camg_last_order_code';
 const LAST_DATE_KEY = 'camg_last_order_date';
-const COUNTER_KEY = 'camg_order_counter';
 
-export function readOrders() {
-  try {
-    const raw = localStorage.getItem(ORDERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
+function rowToOrder(row) {
+  return {
+    code: row.code,
+    timestamp: new Date(row.created_at).getTime(),
+    customerName: row.customer_name,
+    customerLastName: row.customer_last_name,
+    items: row.items || [],
+    total: row.total || 0,
+    status: row.status || 'pending',
+  };
+}
+
+export async function readOrders() {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('readOrders error:', error);
     return [];
+  }
+  return (data || []).map(rowToOrder);
+}
+
+export async function addOrder(order) {
+  const { error } = await supabase.from('orders').insert({
+    code: order.code,
+    customer_name: order.customerName,
+    customer_last_name: order.customerLastName,
+    items: order.items,
+    total: order.total || 0,
+    status: order.status || 'pending',
+  });
+  if (error) {
+    console.error('addOrder error:', error);
+    throw error;
   }
 }
 
-export function writeOrders(orders) {
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-}
-
-export function addOrder(order) {
-  const orders = readOrders();
-  orders.unshift(order);
-  writeOrders(orders);
-}
-
-export function updateOrder(code, patch) {
-  const orders = readOrders();
-  const next = orders.map(o => (o.code === code ? { ...o, ...patch } : o));
-  writeOrders(next);
+export async function updateOrder(code, patch) {
+  const dbPatch = {};
+  if (patch.status !== undefined) dbPatch.status = patch.status;
+  const { error } = await supabase.from('orders').update(dbPatch).eq('code', code);
+  if (error) {
+    console.error('updateOrder error:', error);
+    throw error;
+  }
 }
 
 export function getLastOrderRef() {
@@ -38,7 +62,6 @@ export function getLastOrderRef() {
 export function setLastOrderRef(code) {
   localStorage.setItem(LAST_CODE_KEY, code);
   localStorage.setItem(LAST_DATE_KEY, String(Date.now()));
-  // Cookie persistente (1 año)
   document.cookie = `camg_order_code=${code}; max-age=31536000; path=/`;
 }
 
@@ -46,11 +69,4 @@ export function clearLastOrderRef() {
   localStorage.removeItem(LAST_CODE_KEY);
   localStorage.removeItem(LAST_DATE_KEY);
   document.cookie = 'camg_order_code=; max-age=0; path=/';
-}
-
-export function nextCounter() {
-  const current = Number(localStorage.getItem(COUNTER_KEY) || '0');
-  const next = current + 1;
-  localStorage.setItem(COUNTER_KEY, String(next));
-  return next;
 }

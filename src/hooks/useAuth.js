@@ -10,7 +10,7 @@ export function useAuth() {
   }, []);
 
   const login = useCallback((password) => {
-    const expected = import.meta.env.VITE_ADMIN_PASSWORD || 'camg2026';
+    const expected = import.meta.env.VITE_ADMIN_PASSWORD || 'PauCAMG26';
     if (password === expected) {
       sessionStorage.setItem(SESSION_KEY, 'true');
       setIsAuthed(true);

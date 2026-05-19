@@ -15,7 +15,7 @@ export default function CheckoutForm({ onBack, onComplete }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     if (!name.trim() || !lastName.trim()) {
@@ -44,11 +44,16 @@ export default function CheckoutForm({ onBack, onComplete }) {
       status: 'pending',
     };
 
-    addOrder(order);
-    setLastOrderRef(order.code);
-    clear();
-    setSubmitting(false);
-    onComplete(order);
+    try {
+      await addOrder(order);
+      setLastOrderRef(order.code);
+      clear();
+      onComplete(order);
+    } catch (err) {
+      setError('No se pudo generar el pedido. Reintentá en unos segundos.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

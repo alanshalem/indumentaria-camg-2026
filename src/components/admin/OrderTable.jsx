@@ -6,10 +6,14 @@ import styles from './OrderTable.module.css';
 export default function OrderTable({ orders, onChange }) {
   const [expanded, setExpanded] = useState(null);
 
-  function toggleStatus(order) {
+  async function toggleStatus(order) {
     const next = order.status === 'delivered' ? 'pending' : 'delivered';
-    updateOrder(order.code, { status: next });
-    onChange();
+    try {
+      await updateOrder(order.code, { status: next });
+      onChange();
+    } catch {
+      alert('No se pudo actualizar el estado.');
+    }
   }
 
   if (orders.length === 0) {
