@@ -1,0 +1,153 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.empty {
+  margin: 0;
+  padding: 14px 16px;
+  width: 100%;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- Tarjeta por color ------------------------------------------------------ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.position {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.remove {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  transition: color var(--transition);
+}
+
+.remove:hover {
+  color: #ff6b6b;
+}
+
+/* --- Campos ----------------------------------------------------------------- */
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.nameField,
+.hexField {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.nameField {
+  flex: 1;
+  min-width: 150px;
+}
+
+.nameField > span,
+.hexField > span,
+.photoLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.hexControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+/* El input de color nativo es feo por defecto: se lo deja como una muestra. */
+.hexControl input[type='color'] {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.hexControl input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.hexControl input[type='color']::-webkit-color-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.hexControl code {
+  font-size: 0.76rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Foto de la variante ---------------------------------------------------- */
+
+.photo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.photoHint {
+  font-size: 0.76rem;
+  color: var(--color-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #ff8ca3;
+}

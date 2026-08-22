@@ -9,6 +9,8 @@ interface ModalProps {
   title: string;
   /** Oculta el marco: para lightbox de imágenes a pantalla completa. */
   bare?: boolean;
+  /** `lg` para formularios largos que si no obligan a scrollear de más. */
+  size?: 'md' | 'lg';
   children: ReactNode;
 }
 
@@ -20,7 +22,7 @@ const FOCUSABLE =
  * atrapa el foco y lo devuelve al elemento que lo abrió. La app tenía tres
  * capas modales distintas y ninguna hacía todo esto.
  */
-export function Modal({ isOpen, onClose, title, bare = false, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, bare = false, size = 'md', children }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
@@ -56,7 +58,7 @@ export function Modal({ isOpen, onClose, title, bare = false, children }: ModalP
     <div className={styles.overlay} onMouseDown={onClose}>
       <div
         ref={panelRef}
-        className={bare ? styles.bare : styles.panel}
+        className={bare ? styles.bare : `${styles.panel} ${size === 'lg' ? styles.panelLarge : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

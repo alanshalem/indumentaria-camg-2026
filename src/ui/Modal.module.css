@@ -23,6 +23,10 @@
   overflow: hidden;
 }
 
+.panelLarge {
+  width: min(860px, 100%);
+}
+
 .header {
   display: flex;
   align-items: center;

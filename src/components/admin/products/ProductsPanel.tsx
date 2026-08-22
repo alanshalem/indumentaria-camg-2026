@@ -103,6 +103,7 @@ export function ProductsPanel() {
       )}
 
       <Modal
+        size="lg"
         isOpen={dialog.kind === 'form'}
         onClose={() => setDialog(CLOSED)}
         title={dialog.kind === 'form' && dialog.product ? 'Editar producto' : 'Nuevo producto'}

@@ -51,7 +51,11 @@ export function SizeTierEditor({ tier, label, price, sizes, taken, error, onChan
     <FieldShell
       label={`${label} · ${formatPrice(price)}`}
       error={error}
-      hint={sizes.length === 0 ? 'Sin talles en este tramo de precio.' : undefined}
+      hint={
+        sizes.length === 0
+          ? 'Sin talles en este tramo: nadie va a poder comprar a este precio.'
+          : `${sizes.length} talle${sizes.length === 1 ? '' : 's'} a ${formatPrice(price)}.`
+      }
     >
       <div className={styles.presets}>
         {PRESETS_BY_TIER[tier].map((key) => (

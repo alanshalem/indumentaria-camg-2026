@@ -1,24 +1,25 @@
 .tableWrap {
-  overflow-x: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  overflow: hidden;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
   font-size: 0.92rem;
 }
 
 .table th {
   text-align: left;
   padding: 12px 14px;
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-muted);
+  background: var(--color-surface-2);
   border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
 }
@@ -29,47 +30,127 @@
   vertical-align: middle;
 }
 
-.table tr:last-child td { border-bottom: none; }
-
-.thumbCol { width: 64px; }
-
-.thumb {
-  width: 44px;
-  height: 44px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
+.table tbody tr {
+  transition: background var(--transition);
 }
 
-.inactiveRow { opacity: 0.55; }
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.thumbCol {
+  width: 64px;
+}
+
+/* Ancho fijo: los iconos no necesitan más y le deja aire a la columna Producto. */
+.actionsCol {
+  width: 92px;
+}
+
+.right {
+  text-align: right;
+}
+
+/* --- Producto ---------------------------------------------------------------- */
+
+.thumb {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.inactiveRow {
+  opacity: 0.5;
+}
 
 .name {
   display: block;
+  padding: 0;
+  font-size: 0.95rem;
   font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+  transition: color var(--transition);
+}
+
+.name:hover {
+  color: var(--color-red-bright);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .id {
   display: block;
-  font-size: 0.76rem;
+  margin-top: 2px;
+  font-size: 0.74rem;
   color: var(--color-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-.sizes {
-  color: var(--color-muted);
-  font-size: 0.82rem;
-  max-width: 240px;
+.colors {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
 }
 
-.right { text-align: right; }
+.colorDot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.colorCount {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+}
+
+/* --- Precio por tramo --------------------------------------------------------- */
+
+.price {
+  display: block;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.range {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--color-muted);
+  cursor: help;
+}
+
+.none {
+  color: var(--color-muted);
+}
+
+/* --- Estado -------------------------------------------------------------------- */
 
 .pill {
   padding: 5px 12px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   border: 1px solid transparent;
   white-space: nowrap;
+  transition: filter var(--transition);
+}
+
+.pill:hover:not(:disabled) {
+  filter: brightness(1.25);
+}
+
+.pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .active {
@@ -84,32 +165,63 @@
   color: var(--color-muted);
 }
 
-.rowActions {
+/* --- Acciones ------------------------------------------------------------------ */
+
+/* El flex vive acá, en un div: sobre el <td> le quitaría el display table-cell
+   y la celda dejaría de alinearse con el resto de la fila. */
+.actions {
   display: flex;
-  gap: 10px;
-  white-space: nowrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
-.rowActions button {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--color-muted);
-  transition: color var(--transition);
-}
-
-.rowActions button:hover:not(:disabled) { color: var(--color-red-bright); }
-.rowActions button:disabled { opacity: 0.4; cursor: not-allowed; }
-.danger:hover:not(:disabled) { color: #ff6b6b !important; }
-
-.colors {
+.iconButton {
   display: inline-flex;
-  gap: 4px;
-  margin-top: 4px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
 }
 
-.colorDot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+.iconButton:hover:not(:disabled) {
+  color: var(--color-white);
+  border-color: var(--color-red);
+  background: rgba(220, 20, 60, 0.12);
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.danger:hover:not(:disabled) {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.6);
+  background: rgba(255, 107, 107, 0.12);
+}
+
+/* --- Pie ------------------------------------------------------------------------ */
+
+.footNote {
+  margin: 0;
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+  background: var(--color-surface-2);
+  border-top: 1px solid var(--color-border);
+}
+
+/* En pantallas chicas la tabla scrollea en lugar de aplastar las columnas. */
+@media (max-width: 860px) {
+  .tableWrap {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 700px;
+  }
 }
