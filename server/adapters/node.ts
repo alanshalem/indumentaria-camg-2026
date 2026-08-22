@@ -5,6 +5,8 @@ import { handleApiRequest } from '../app';
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const API_PREFIX = '/api';
+/** Query param donde `vercel.json` deja la ruta original al reescribir. */
+const PATH_PARAM = 'path';
 
 /**
  * Adaptador Node ⇄ núcleo HTTP. Lo usan tanto las Functions de Vercel como el
@@ -33,9 +35,25 @@ export async function handleNodeRequest(req: IncomingMessage, res: ServerRespons
   }
 }
 
+/**
+ * En Vercel la ruta real no llega en el pathname: `vercel.json` reescribe
+ * `/api/algo/mas` a `/api?path=algo/mas`, así que se lee de ahí. En el
+ * dev-server de Vite el pathname sí es el original y se usa ese.
+ */
+function resolvePath(url: URL): string {
+  const rewritten = url.searchParams.get(PATH_PARAM);
+  if (rewritten !== null) return `/${rewritten.replace(/^\/+/, '')}`;
+
+  const { pathname } = url;
+  return pathname.startsWith(API_PREFIX) ? pathname.slice(API_PREFIX.length) || '/' : pathname;
+}
+
 async function toApiRequest(req: IncomingMessage): Promise<ApiRequest> {
   const url = new URL(req.url ?? '/', 'http://localhost');
-  const path = url.pathname.startsWith(API_PREFIX) ? url.pathname.slice(API_PREFIX.length) : url.pathname;
+  const path = resolvePath(url);
+
+  // El parámetro de ruteo es infraestructura, no un filtro de la API.
+  url.searchParams.delete(PATH_PARAM);
 
   return {
     method: (req.method ?? 'GET').toUpperCase() as HttpMethod,
