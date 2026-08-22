@@ -3,7 +3,6 @@ import { createOrderSchema, orderCodeSchema } from '../shared/schemas/order.sche
 import { productInputSchema } from '../shared/schemas/product.schema';
 import { promotionPatchSchema, comboConfigSchema } from '../shared/schemas/promotion.schema';
 import { formatPhone, normalizePhone, whatsappLink } from '../shared/domain/phone';
-import { toCsv } from '../src/utils/exportCsv';
 
 describe('createOrderSchema', () => {
   const valid = {
@@ -166,12 +165,5 @@ describe('promotion schemas', () => {
   it('exige al menos un cambio en el patch', () => {
     expect(promotionPatchSchema.safeParse({}).success).toBe(false);
     expect(promotionPatchSchema.safeParse({ isActive: false }).success).toBe(true);
-  });
-});
-
-describe('toCsv', () => {
-  it('escapa comillas y separadores', () => {
-    const csv = toCsv([{ name: 'Campera "premium", roja' }], [{ header: 'nombre', value: (row) => row.name }]);
-    expect(csv).toBe('"nombre"\r\n"Campera ""premium"", roja"');
   });
 });

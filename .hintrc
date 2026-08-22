@@ -1,0 +1,12 @@
+{
+  "hints": {
+    "typescript-config/is-valid": "off"
+  },
+  "_comment": [
+    "El schema de tsconfig que trae webhint corta en ES2022 y marca lib: ['ES2023']",
+    "como valor invalido. Es falso: TypeScript 5.9 incluye lib.es2023.d.ts (y es2024)",
+    "y `npm run typecheck` compila sin errores. Se apaga esa regla puntual, no todas:",
+    "compat-api/css sigue activa y fue la que detecto que backdrop-filter necesitaba",
+    "el prefijo -webkit- para Safari."
+  ]
+}

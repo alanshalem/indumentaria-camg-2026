@@ -1,45 +1,23 @@
 import { useCallback, useMemo, useState } from 'react';
 import { formatPrice } from '@shared/domain/money';
 import {
-  countOrderUnits,
-  customerFullName,
-  describeItem,
   ORDER_STATUS_LABELS,
   ORDER_STATUSES,
   type Order,
   type OrderStatus,
 } from '@shared/domain/order';
-import { formatPhone } from '@shared/domain/phone';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
+import { errorMessage } from '@/services/apiError';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { orderService } from '@/services/orderService';
 import { endOfDayIso, startOfDayIso } from '@/utils/formatDate';
-import { downloadCsv, toCsv, type CsvColumn } from '@/utils/exportCsv';
+import { exportOrdersToExcel } from '@/services/exportOrders';
 import { Alert, Button, Field, SelectField, Spinner } from '@/ui';
 import { OrderTable } from './OrderTable';
 import styles from '../Dashboard.module.css';
 
 const NO_ORDERS: Order[] = [];
 type StatusFilter = OrderStatus | 'all';
-
-const CSV_COLUMNS: readonly CsvColumn<Order>[] = [
-  { header: 'codigo', value: (order) => order.code },
-  { header: 'fecha', value: (order) => new Date(order.timestamp).toISOString() },
-  { header: 'socio', value: customerFullName },
-  { header: 'telefono', value: (order) => formatPhone(order.phone) },
-  { header: 'email', value: (order) => order.email ?? '' },
-  { header: 'items', value: (order) => order.items.map(describeItem).join(' | ') },
-  { header: 'unidades', value: (order) => countOrderUnits(order.items) },
-  { header: 'subtotal', value: (order) => order.subtotal },
-  {
-    header: 'promociones',
-    value: (order) =>
-      order.promotions.map((promotion) => `${promotion.label} (-${promotion.amount})`).join(' | '),
-  },
-  { header: 'descuento', value: (order) => order.subtotal - order.total },
-  { header: 'total', value: (order) => order.total },
-  { header: 'estado', value: (order) => ORDER_STATUS_LABELS[order.status] },
-];
 
 export function OrdersPanel() {
   const [search, setSearch] = useState('');
@@ -84,8 +62,21 @@ export function OrdersPanel() {
     [set],
   );
 
-  const exportCsv = () =>
-    downloadCsv(`camg-pedidos-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(orders, CSV_COLUMNS));
+  // La librería de Excel se descarga recién acá, al primer click.
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+
+  async function handleExport() {
+    setExportError('');
+    setIsExporting(true);
+    try {
+      await exportOrdersToExcel(orders);
+    } catch (caught) {
+      setExportError(errorMessage(caught, 'No se pudo generar el Excel.'));
+    } finally {
+      setIsExporting(false);
+    }
+  }
 
   return (
     <>
@@ -130,8 +121,14 @@ export function OrdersPanel() {
         <Field label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
         <Field label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
         <div className={styles.filterActions}>
-          <Button variant="ghost" onClick={exportCsv} disabled={orders.length === 0}>
-            Exportar CSV
+          <Button
+            variant="ghost"
+            onClick={() => void handleExport()}
+            disabled={orders.length === 0}
+            loading={isExporting}
+            title="Descarga un Excel con los pedidos, el detalle de items y el resumen por producto"
+          >
+            {isExporting ? 'Generando…' : 'Exportar Excel'}
           </Button>
           <Button variant="ghost" onClick={() => void reload()}>
             Actualizar
@@ -139,7 +136,7 @@ export function OrdersPanel() {
         </div>
       </section>
 
-      {error && <Alert>{error}</Alert>}
+      {(error || exportError) && <Alert>{exportError || error}</Alert>}
 
       {isLoading && orders.length === 0 ? (
         <div className={styles.loading}>

@@ -55,6 +55,7 @@
   font-weight: 800;
   color: var(--color-red-bright);
   letter-spacing: 0.04em;
+  -webkit-user-select: all;
   user-select: all;
 }
 

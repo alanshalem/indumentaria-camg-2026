@@ -123,6 +123,43 @@ export const priceRange = (
   return { min, max, hasRange: min !== max };
 };
 
+/** Orden canónico de los talles de adulto, para ordenar listados. */
+const ADULT_SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', 'XXXL'];
+
+/**
+ * Valor numérico de un talle, o `null` si es de letra.
+ *
+ * No alcanza con "empieza con dígito": `3XL` y `2XL` empiezan con número y son
+ * talles de adulto grandes. Sólo cuenta como numérico si después de los dígitos
+ * viene el final (`6`), un guion (`38-42`) o una barra (`16/XS`).
+ */
+function numericSizeValue(size: string): number | null {
+  const match = /^(\d+)(?:$|\s*[-/])/.exec(size.trim());
+  return match ? Number.parseInt(match[1]!, 10) : null;
+}
+
+/**
+ * Ordena talles como los leería una persona: primero los numéricos de menor a
+ * mayor (6, 8, 10, 14, 16/XS) y después los de letra en su orden real.
+ * Sin esto un export sale como "10, 12, 14, 6, 8" y parece roto.
+ */
+export function compareSizes(a: string, b: string): number {
+  const numericA = numericSizeValue(a);
+  const numericB = numericSizeValue(b);
+
+  if (numericA !== null && numericB !== null) return numericA - numericB;
+  if (numericA !== null) return -1;
+  if (numericB !== null) return 1;
+
+  const indexA = ADULT_SIZE_ORDER.indexOf(a.toUpperCase());
+  const indexB = ADULT_SIZE_ORDER.indexOf(b.toUpperCase());
+  if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+  if (indexA !== -1) return -1;
+  if (indexB !== -1) return 1;
+
+  return a.localeCompare(b, 'es');
+}
+
 /** "6 a 14" / "Único": resume un tramo de talles para mostrar su precio. */
 export function sizeRangeLabel(sizes: readonly string[]): string {
   if (sizes.length === 0) return '';
