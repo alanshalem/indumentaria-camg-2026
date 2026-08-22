@@ -1,7 +1,8 @@
 node_modules
 dist
-.env
-.env.local
+# Cualquier .env queda fuera de git; la unica excepcion es el ejemplo sin valores.
+.env*
+!.env.example
 .vercel
 .DS_Store
 *.log
