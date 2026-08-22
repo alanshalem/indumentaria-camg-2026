@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { computeSubtotal, countOrderUnits, describeItem, nextStatus } from '../shared/domain/order';
 import { generateOrderCode, isOrderCode } from '../shared/domain/orderCode';
 import { formatPrice, isValidPrice } from '../shared/domain/money';
-import { resolveProductId, slugify } from '../shared/domain/product';
+import { priceBands, resolveProductId, sizeRangeLabel, slugify } from '../shared/domain/product';
 
 describe('orderCode', () => {
   it('genera un código con el formato esperado', () => {
@@ -86,5 +86,36 @@ describe('slugify', () => {
   it('deriva el id del nombre cuando no se especifica', () => {
     expect(resolveProductId({ name: 'Buzo Canguro' })).toBe('buzo-canguro');
     expect(resolveProductId({ id: 'buzo-custom', name: 'Buzo Canguro' })).toBe('buzo-custom');
+  });
+});
+
+describe('tramos de precio por talle', () => {
+  const campera = {
+    sizesSmall: ['6', '8', '10', '12', '14'],
+    sizesLarge: ['16/XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
+    priceSmall: 48500,
+    priceLarge: 54000,
+  };
+
+  it('resume un tramo por sus extremos', () => {
+    expect(sizeRangeLabel(campera.sizesSmall)).toBe('6 a 14');
+    expect(sizeRangeLabel(['Único'])).toBe('Único');
+    expect(sizeRangeLabel([])).toBe('');
+  });
+
+  it('devuelve los dos tramos con su precio', () => {
+    expect(priceBands(campera)).toEqual([
+      { tier: 'small', range: '6 a 14', price: 48500 },
+      { tier: 'large', range: '16/XS a 3XL', price: 54000 },
+    ]);
+  });
+
+  it('no muestra tramos cuando los dos precios son iguales', () => {
+    // Toallas y cuellos valen lo mismo en cualquier talle: dos columnas serían ruido.
+    expect(priceBands({ ...campera, priceSmall: 2000, priceLarge: 2000 })).toEqual([]);
+  });
+
+  it('no muestra tramos cuando uno de los dos no tiene talles', () => {
+    expect(priceBands({ ...campera, sizesSmall: [] })).toEqual([]);
   });
 });

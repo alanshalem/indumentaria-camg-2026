@@ -1,11 +1,11 @@
-import { ROUTES } from '../../../shared/api/contracts';
-import { productImageUploadSchema } from '../../../shared/schemas/product.schema';
-import { payloadTooLarge } from '../../http/errors';
-import { Router } from '../../http/router';
-import { created } from '../../http/responses';
-import { parseOrThrow } from '../../http/validate';
-import { adminOnly } from '../../security/adminGuard';
-import { imageStorage } from '../../infra/imageStorage';
+import { ROUTES } from '../../../shared/api/contracts.js';
+import { productImageUploadSchema } from '../../../shared/schemas/product.schema.js';
+import { payloadTooLarge } from '../../http/errors.js';
+import { Router } from '../../http/router.js';
+import { created } from '../../http/responses.js';
+import { parseOrThrow } from '../../http/validate.js';
+import { adminOnly } from '../../security/adminGuard.js';
+import { imageStorage } from '../../infra/imageStorage.js';
 
 /** Vercel corta los cuerpos serverless en ~4.5 MB; avisamos antes de intentarlo. */
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;

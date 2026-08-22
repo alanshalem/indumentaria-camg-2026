@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { unauthorized } from '../http/errors';
+import { unauthorized } from '../http/errors.js';
 
 /**
  * JWT HS256 mínimo sobre `node:crypto`. Firmar y verificar un token opaco son

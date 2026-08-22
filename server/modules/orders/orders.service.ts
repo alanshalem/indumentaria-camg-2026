@@ -4,15 +4,15 @@ import type {
   Order,
   OrderItem,
   OrderStatus,
-} from '../../../shared/domain/order';
-import { generateOrderCode } from '../../../shared/domain/orderCode';
-import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product';
-import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions';
-import type { OrderQueryDto } from '../../../shared/schemas/order.schema';
-import { conflict, internalError, isHttpError, validationError } from '../../http/errors';
-import { orderRepository, type OrderRepository } from '../../infra/orderRepository';
-import { productRepository, type ProductRepository } from '../../infra/productRepository';
-import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository';
+} from '../../../shared/domain/order.js';
+import { generateOrderCode } from '../../../shared/domain/orderCode.js';
+import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product.js';
+import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions.js';
+import type { OrderQueryDto } from '../../../shared/schemas/order.schema.js';
+import { conflict, internalError, isHttpError, validationError } from '../../http/errors.js';
+import { orderRepository, type OrderRepository } from '../../infra/orderRepository.js';
+import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
+import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
 
 const CODE_ATTEMPTS = 5;
 

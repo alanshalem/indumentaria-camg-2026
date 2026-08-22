@@ -1,5 +1,5 @@
-import { notFound } from './errors';
-import type { ApiRequest, ApiResponse, HttpMethod, RouteHandler } from './types';
+import { notFound } from './errors.js';
+import type { ApiRequest, ApiResponse, HttpMethod, RouteHandler } from './types.js';
 
 interface Route {
   method: HttpMethod;

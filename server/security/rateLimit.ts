@@ -1,4 +1,4 @@
-import { tooManyRequests } from '../http/errors';
+import { tooManyRequests } from '../http/errors.js';
 
 interface Bucket {
   hits: number[];

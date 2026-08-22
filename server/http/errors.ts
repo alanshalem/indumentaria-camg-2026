@@ -1,4 +1,4 @@
-import type { ApiErrorBody, ApiErrorCode } from '../../shared/api/errors';
+import type { ApiErrorBody, ApiErrorCode } from '../../shared/api/errors.js';
 
 const STATUS_BY_CODE: Record<ApiErrorCode, number> = {
   BAD_REQUEST: 400,

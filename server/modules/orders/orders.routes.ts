@@ -1,15 +1,15 @@
-import { ROUTES } from '../../../shared/api/contracts';
+import { ROUTES } from '../../../shared/api/contracts.js';
 import {
   createOrderSchema,
   orderCodeSchema,
   orderQuerySchema,
   updateOrderSchema,
-} from '../../../shared/schemas/order.schema';
-import { Router } from '../../http/router';
-import { created, ok } from '../../http/responses';
-import { parseOrThrow } from '../../http/validate';
-import { adminOnly } from '../../security/adminGuard';
-import { ordersService } from './orders.service';
+} from '../../../shared/schemas/order.schema.js';
+import { Router } from '../../http/router.js';
+import { created, ok } from '../../http/responses.js';
+import { parseOrThrow } from '../../http/validate.js';
+import { adminOnly } from '../../security/adminGuard.js';
+import { ordersService } from './orders.service.js';
 
 export const orderRoutes = new Router()
   .get(

@@ -1,10 +1,10 @@
-import { ROUTES } from '../../../shared/api/contracts';
-import { productInputSchema, productPatchSchema } from '../../../shared/schemas/product.schema';
-import { Router } from '../../http/router';
-import { created, noContent, ok } from '../../http/responses';
-import { parseOrThrow } from '../../http/validate';
-import { adminOnly, isAdminRequest } from '../../security/adminGuard';
-import { productsService } from './products.service';
+import { ROUTES } from '../../../shared/api/contracts.js';
+import { productInputSchema, productPatchSchema } from '../../../shared/schemas/product.schema.js';
+import { Router } from '../../http/router.js';
+import { created, noContent, ok } from '../../http/responses.js';
+import { parseOrThrow } from '../../http/validate.js';
+import { adminOnly, isAdminRequest } from '../../security/adminGuard.js';
+import { productsService } from './products.service.js';
 
 export const productRoutes = new Router()
   // Lectura pública del catálogo. Los inactivos sólo los ve un admin.

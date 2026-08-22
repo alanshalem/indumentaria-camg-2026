@@ -1,146 +1,147 @@
 .card {
+  display: flex;
+  flex-direction: column;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: border-color var(--transition), transform var(--transition);
+  transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
 }
+
 .card:hover {
   border-color: var(--color-red);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
+
+/* --- Imagen ---------------------------------------------------------------- */
 
 .media {
   position: relative;
-  background: #000;
+  display: block;
   aspect-ratio: 4 / 3;
+  /* Las fotos vienen con fondo blanco: se acompaña en vez de pelear con él. */
+  background: linear-gradient(160deg, #ffffff 0%, #ededed 100%);
   overflow: hidden;
 }
+
 .media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 320ms ease;
 }
 
-.thumbs {
+.card:hover .media img {
+  transform: scale(1.045);
+}
+
+.badge {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
-  right: 8px;
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding: 2px;
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 24px);
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
 }
-.thumb {
-  width: 42px;
-  height: 42px;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 2px solid rgba(255,255,255,0.3);
-  flex-shrink: 0;
-  padding: 0;
-  background: #000;
+
+.mediaHint {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-white);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.78));
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity var(--transition), transform var(--transition);
 }
-.thumb img { width: 100%; height: 100%; object-fit: cover; }
-.thumbActive { border-color: var(--color-red); }
+
+.card:hover .mediaHint,
+.media:focus-visible .mediaHint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Contenido ------------------------------------------------------------- */
 
 .body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
   padding: 18px;
+}
+
+.heading {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 5px;
 }
 
 .name {
   margin: 0;
-  font-size: 1.08rem;
+  font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.25;
+}
+
+.name a {
   color: var(--color-white);
+  text-decoration: none;
 }
-.desc {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.88rem;
-  line-height: 1.4;
-}
-.price {
-  margin: 4px 0 0;
-  font-size: 1.4rem;
-  font-weight: 800;
+
+.name a:hover {
   color: var(--color-red-bright);
 }
 
-.field { display: flex; flex-direction: column; gap: 6px; }
+.desc {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  /* Dos líneas fijas: las tarjetas de la fila quedan alineadas entre sí. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.price {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-red-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
   color: var(--color-muted);
 }
 
-.colors { display: flex; gap: 8px; flex-wrap: wrap; }
-.colorChip {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
-  cursor: pointer;
-  transition: border-color var(--transition), transform var(--transition);
-  padding: 0;
+/* Empuja el botón al pie para que todas las tarjetas lo tengan a la misma altura. */
+.cta {
+  margin-top: auto;
 }
-.colorChip:hover { transform: scale(1.08); }
-.colorActive {
-  border-color: var(--color-red-bright);
-  box-shadow: 0 0 0 2px rgba(220,20,60,0.25);
-}
-
-.sizes { display: flex; flex-wrap: wrap; gap: 6px; }
-.sizeChip {
-  padding: 6px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  transition: all var(--transition);
-}
-.sizeChip:hover { border-color: var(--color-red); }
-.sizeActive {
-  background: var(--color-red);
-  border-color: var(--color-red);
-  color: var(--color-white);
-  font-weight: 700;
-}
-
-.qtyRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.qtyControl {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--color-surface-2);
-}
-.qtyControl button {
-  width: 36px;
-  height: 36px;
-  font-size: 1.1rem;
-  color: var(--color-white);
-}
-.qtyControl button:hover { background: var(--color-red); }
-.qtyControl span {
-  display: inline-block;
-  min-width: 36px;
-  text-align: center;
-  font-weight: 700;
-}
-
-.cta { margin-top: 4px; }

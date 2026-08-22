@@ -1,6 +1,6 @@
-import type { Ars } from './money';
-import type { AppliedPromotion } from './promotions';
-import type { SizeTier } from './product';
+import type { Ars } from './money.js';
+import type { AppliedPromotion } from './promotions.js';
+import type { SizeTier } from './product.js';
 
 export const ORDER_STATUSES = ['pending', 'delivered'] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];

@@ -1,6 +1,6 @@
-import { resolveProductId, type Product, type ProductInput } from '../../../shared/domain/product';
-import { productRepository, type ProductRepository } from '../../infra/productRepository';
-import { conflict, validationError } from '../../http/errors';
+import { resolveProductId, type Product, type ProductInput } from '../../../shared/domain/product.js';
+import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
+import { conflict, validationError } from '../../http/errors.js';
 
 export interface ProductsService {
   list(includeInactive: boolean): Promise<Product[]>;

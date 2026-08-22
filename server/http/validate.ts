@@ -1,5 +1,5 @@
 import type { ZodType } from 'zod';
-import { validationError } from './errors';
+import { validationError } from './errors.js';
 
 /**
  * Adaptador zod → HttpError. Centralizarlo acá evita repetir el mapeo de

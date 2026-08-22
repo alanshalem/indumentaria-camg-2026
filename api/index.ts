@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { handleNodeRequest } from '../server/adapters/node';
+import { handleNodeRequest } from '../server/adapters/node.js';
 
 /**
  * Única Function de Vercel: un solo artefacto y un solo cold start para toda la API.

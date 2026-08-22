@@ -1,8 +1,8 @@
-import type { Product, ProductInput } from '../../shared/domain/product';
-import { notFound } from '../http/errors';
-import { toProduct, type ProductRow } from './mappers';
-import { toHttpError } from './postgrestError';
-import { getSupabase } from './supabaseClient';
+import type { Product, ProductInput } from '../../shared/domain/product.js';
+import { notFound } from '../http/errors.js';
+import { toProduct, type ProductRow } from './mappers.js';
+import { toHttpError } from './postgrestError.js';
+import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'products';
 const COLUMNS =

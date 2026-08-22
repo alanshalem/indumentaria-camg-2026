@@ -1,7 +1,7 @@
-import type { Order, OrderItem, OrderStatus } from '../../shared/domain/order';
-import type { Product, ProductColor } from '../../shared/domain/product';
-import type { AppliedPromotion, PromotionDefinition, PromotionKind } from '../../shared/domain/promotions';
-import { isSizeChartId } from '../../shared/domain/sizeCharts';
+import type { Order, OrderItem, OrderStatus } from '../../shared/domain/order.js';
+import type { Product, ProductColor } from '../../shared/domain/product.js';
+import type { AppliedPromotion, PromotionDefinition, PromotionKind } from '../../shared/domain/promotions.js';
+import { isSizeChartId } from '../../shared/domain/sizeCharts.js';
 
 /** Filas crudas de Postgres. snake_case vive sólo acá. */
 export interface ProductRow {

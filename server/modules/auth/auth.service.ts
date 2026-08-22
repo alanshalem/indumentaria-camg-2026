@@ -1,9 +1,9 @@
-import { getConfig } from '../../config/env';
-import { unauthorized } from '../../http/errors';
-import { loginRateLimiter } from '../../security/rateLimit';
-import { ADMIN_SUBJECT } from '../../security/adminGuard';
-import { createToken, safeEquals } from '../../security/token';
-import type { LoginResponse } from '../../../shared/api/contracts';
+import { getConfig } from '../../config/env.js';
+import { unauthorized } from '../../http/errors.js';
+import { loginRateLimiter } from '../../security/rateLimit.js';
+import { ADMIN_SUBJECT } from '../../security/adminGuard.js';
+import { createToken, safeEquals } from '../../security/token.js';
+import type { LoginResponse } from '../../../shared/api/contracts.js';
 
 /**
  * La clave vive sólo en el entorno del servidor. Antes se comparaba en el

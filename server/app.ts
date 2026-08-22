@@ -1,12 +1,12 @@
-import { ConfigError } from './config/env';
-import { HttpError, internalError, isHttpError } from './http/errors';
-import { Router } from './http/router';
-import type { ApiRequest, ApiResponse } from './http/types';
-import { authRoutes } from './modules/auth/auth.routes';
-import { orderRoutes } from './modules/orders/orders.routes';
-import { productRoutes } from './modules/products/products.routes';
-import { promotionRoutes } from './modules/promotions/promotions.routes';
-import { uploadRoutes } from './modules/uploads/uploads.routes';
+import { ConfigError } from './config/env.js';
+import { HttpError, internalError, isHttpError } from './http/errors.js';
+import { Router } from './http/router.js';
+import type { ApiRequest, ApiResponse } from './http/types.js';
+import { authRoutes } from './modules/auth/auth.routes.js';
+import { orderRoutes } from './modules/orders/orders.routes.js';
+import { productRoutes } from './modules/products/products.routes.js';
+import { promotionRoutes } from './modules/promotions/promotions.routes.js';
+import { uploadRoutes } from './modules/uploads/uploads.routes.js';
 
 /** Tabla de rutas de la API. Cada módulo declara las suyas; acá sólo se montan. */
 export const apiRouter = new Router()

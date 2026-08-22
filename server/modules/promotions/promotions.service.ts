@@ -1,12 +1,12 @@
 import type { ZodType } from 'zod';
-import type { PromotionDefinition } from '../../../shared/domain/promotions';
+import type { PromotionDefinition } from '../../../shared/domain/promotions.js';
 import {
   promotionConfigByKind,
   type PromotionPatchDto,
-} from '../../../shared/schemas/promotion.schema';
-import { notFound } from '../../http/errors';
-import { parseOrThrow } from '../../http/validate';
-import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository';
+} from '../../../shared/schemas/promotion.schema.js';
+import { notFound } from '../../http/errors.js';
+import { parseOrThrow } from '../../http/validate.js';
+import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
 
 export interface PromotionsService {
   list(includeInactive: boolean): Promise<PromotionDefinition[]>;

@@ -1,6 +1,6 @@
-import type { Order } from '../domain/order';
-import type { Product } from '../domain/product';
-import type { PromotionDefinition } from '../domain/promotions';
+import type { Order } from '../domain/order.js';
+import type { Product } from '../domain/product.js';
+import type { PromotionDefinition } from '../domain/promotions.js';
 
 export const API_BASE = '/api';
 

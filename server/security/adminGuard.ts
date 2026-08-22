@@ -1,7 +1,7 @@
-import { getConfig } from '../config/env';
-import { unauthorized } from '../http/errors';
-import type { ApiRequest, ApiResponse, RouteHandler } from '../http/types';
-import { verifyToken, type TokenPayload } from './token';
+import { getConfig } from '../config/env.js';
+import { unauthorized } from '../http/errors.js';
+import type { ApiRequest, ApiResponse, RouteHandler } from '../http/types.js';
+import { verifyToken, type TokenPayload } from './token.js';
 
 export const ADMIN_SUBJECT = 'admin';
 

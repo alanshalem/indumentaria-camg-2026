@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { MAX_PRICE_ARS } from '../domain/money';
-import { SIZE_CHART_IDS } from '../domain/sizeCharts';
+import { MAX_PRICE_ARS } from '../domain/money.js';
+import { SIZE_CHART_IDS } from '../domain/sizeCharts.js';
 
 const trimmed = (max: number) => z.string().trim().max(max);
 

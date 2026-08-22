@@ -1,5 +1,5 @@
-import type { Ars } from './money';
-import type { SizeChartId } from './sizeCharts';
+import type { Ars } from './money.js';
+import type { SizeChartId } from './sizeCharts.js';
 
 /**
  * La lista de precios del club tiene dos columnas —"Talles Grandes" y "Talles
@@ -121,6 +121,29 @@ export const priceRange = (
   const min = prices.length ? Math.min(...prices) : product.priceLarge;
   const max = prices.length ? Math.max(...prices) : product.priceLarge;
   return { min, max, hasRange: min !== max };
+};
+
+/** "6 a 14" / "Único": resume un tramo de talles para mostrar su precio. */
+export function sizeRangeLabel(sizes: readonly string[]): string {
+  if (sizes.length === 0) return '';
+  if (sizes.length === 1) return sizes[0]!;
+  return `${sizes[0]} a ${sizes[sizes.length - 1]}`;
+}
+
+/**
+ * Los dos tramos de precio, sólo cuando de verdad valen distinto. Sirve para
+ * explicar el precio sin pegarle una etiqueta al número.
+ */
+export const priceBands = (
+  product: Pick<Product, 'sizesSmall' | 'sizesLarge' | 'priceSmall' | 'priceLarge'>,
+): Array<{ tier: SizeTier; range: string; price: Ars }> => {
+  if (product.priceSmall === product.priceLarge) return [];
+  if (product.sizesSmall.length === 0 || product.sizesLarge.length === 0) return [];
+
+  return [
+    { tier: 'small', range: sizeRangeLabel(product.sizesSmall), price: product.priceSmall },
+    { tier: 'large', range: sizeRangeLabel(product.sizesLarge), price: product.priceLarge },
+  ];
 };
 
 export const findColor = (product: Pick<Product, 'colors'>, name: string | null) =>

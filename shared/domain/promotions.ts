@@ -1,5 +1,5 @@
-import type { Ars } from './money';
-import type { SizeTier } from './product';
+import type { Ars } from './money.js';
+import type { SizeTier } from './product.js';
 
 /**
  * Motor de promociones.
@@ -261,6 +261,42 @@ export function evaluatePromotions(
     total: Math.max(0, subtotal - discountTotal),
   };
 }
+
+/**
+ * Si la promo nombra explícitamente a este producto. Sirve para anunciarla en
+ * la ficha: "combiná con el pantalón y ahorrá".
+ */
+export const promotionNamesProduct = (
+  definition: PromotionDefinition,
+  productId: string,
+): boolean =>
+  definition.kind === 'combo' &&
+  isComboConfig(definition.config) &&
+  definition.config.productIds.includes(productId);
+
+/**
+ * Promos vigentes que puede llegar a disparar este producto. Las que no
+ * dependen de un producto puntual —como la de dos iguales de distinto talle—
+ * aplican a todo el catálogo.
+ */
+export const promotionsForProduct = (
+  productId: string,
+  definitions: readonly PromotionDefinition[],
+): PromotionDefinition[] =>
+  definitions.filter(
+    (definition) =>
+      definition.isActive &&
+      (definition.kind !== 'combo' || promotionNamesProduct(definition, productId)),
+  );
+
+/** El otro producto del combo, para poder linkearlo desde la ficha. */
+export const comboPartnerOf = (
+  definition: PromotionDefinition,
+  productId: string,
+): string | null => {
+  if (!isComboConfig(definition.config)) return null;
+  return definition.config.productIds.find((id) => id !== productId) ?? null;
+};
 
 /**
  * Expande líneas de carrito (con cantidad) a unidades sueltas.

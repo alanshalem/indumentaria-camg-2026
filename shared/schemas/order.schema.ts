@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ORDER_STATUSES } from '../domain/order';
-import { ORDER_CODE_PATTERN } from '../domain/orderCode';
-import { isValidPhone, normalizePhone } from '../domain/phone';
+import { ORDER_STATUSES } from '../domain/order.js';
+import { ORDER_CODE_PATTERN } from '../domain/orderCode.js';
+import { isValidPhone, normalizePhone } from '../domain/phone.js';
 
 export const MAX_UNITS_PER_LINE = 50;
 export const MAX_LINES_PER_ORDER = 40;

@@ -1,6 +1,6 @@
-import { getConfig } from '../config/env';
-import { internalError } from '../http/errors';
-import { getSupabase } from './supabaseClient';
+import { getConfig } from '../config/env.js';
+import { internalError } from '../http/errors.js';
+import { getSupabase } from './supabaseClient.js';
 
 const EXTENSION_BY_TYPE: Record<string, string> = {
   'image/png': 'png',

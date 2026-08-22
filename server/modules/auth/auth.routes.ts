@@ -1,10 +1,10 @@
-import { ROUTES } from '../../../shared/api/contracts';
-import { loginSchema } from '../../../shared/schemas/auth.schema';
-import { Router } from '../../http/router';
-import { ok } from '../../http/responses';
-import { parseOrThrow } from '../../http/validate';
-import { requireAdminSession } from '../../security/adminGuard';
-import { login } from './auth.service';
+import { ROUTES } from '../../../shared/api/contracts.js';
+import { loginSchema } from '../../../shared/schemas/auth.schema.js';
+import { Router } from '../../http/router.js';
+import { ok } from '../../http/responses.js';
+import { parseOrThrow } from '../../http/validate.js';
+import { requireAdminSession } from '../../security/adminGuard.js';
+import { login } from './auth.service.js';
 
 export const authRoutes = new Router()
   .post(ROUTES.auth.login, (request) => {

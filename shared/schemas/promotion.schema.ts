@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { MAX_PRICE_ARS } from '../domain/money';
-import { PROMOTION_KINDS } from '../domain/promotions';
+import { MAX_PRICE_ARS } from '../domain/money.js';
+import { PROMOTION_KINDS } from '../domain/promotions.js';
 
 const price = z.number().int().min(0).max(MAX_PRICE_ARS);
 

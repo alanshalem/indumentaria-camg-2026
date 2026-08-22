@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  comboPartnerOf,
   evaluatePromotions,
   expandUnits,
+  promotionNamesProduct,
+  promotionsForProduct,
   type PricedUnit,
   type PromotionDefinition,
 } from '../shared/domain/promotions';
@@ -226,5 +229,40 @@ describe('expandUnits', () => {
     );
 
     expect(evaluatePromotions(units, [FAMILIA]).discounts).toHaveLength(1);
+  });
+});
+
+describe('promociones por producto', () => {
+  it('reconoce a los dos productos nombrados por el combo', () => {
+    expect(promotionNamesProduct(COMBO, 'buzo-medio-cierre')).toBe(true);
+    expect(promotionNamesProduct(COMBO, 'pantalon-con-cierre')).toBe(true);
+    expect(promotionNamesProduct(COMBO, 'remera-algodon')).toBe(false);
+  });
+
+  it('la promo familia no nombra ningún producto puntual', () => {
+    expect(promotionNamesProduct(FAMILIA, 'remera-algodon')).toBe(false);
+  });
+
+  it('lista el combo sólo en los productos que lo integran', () => {
+    const delBuzo = promotionsForProduct('buzo-medio-cierre', [COMBO, FAMILIA]).map((p) => p.id);
+    const deLaRemera = promotionsForProduct('remera-algodon', [COMBO, FAMILIA]).map((p) => p.id);
+
+    expect(delBuzo).toEqual(['combo-buzo-pantalon', 'familia-camg']);
+    // La promo familia aplica a todo el catálogo; el combo no.
+    expect(deLaRemera).toEqual(['familia-camg']);
+  });
+
+  it('ignora las promos apagadas', () => {
+    const result = promotionsForProduct('buzo-medio-cierre', [
+      { ...COMBO, isActive: false },
+      FAMILIA,
+    ]);
+    expect(result.map((p) => p.id)).toEqual(['familia-camg']);
+  });
+
+  it('devuelve el compañero del combo para poder linkearlo', () => {
+    expect(comboPartnerOf(COMBO, 'buzo-medio-cierre')).toBe('pantalon-con-cierre');
+    expect(comboPartnerOf(COMBO, 'pantalon-con-cierre')).toBe('buzo-medio-cierre');
+    expect(comboPartnerOf(FAMILIA, 'remera-algodon')).toBeNull();
   });
 });

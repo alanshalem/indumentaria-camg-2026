@@ -1,9 +1,9 @@
-import type { Order, OrderStatus } from '../../shared/domain/order';
-import type { OrderQueryDto } from '../../shared/schemas/order.schema';
-import { notFound } from '../http/errors';
-import { toOrder, type OrderRow } from './mappers';
-import { toHttpError } from './postgrestError';
-import { getSupabase } from './supabaseClient';
+import type { Order, OrderStatus } from '../../shared/domain/order.js';
+import type { OrderQueryDto } from '../../shared/schemas/order.schema.js';
+import { notFound } from '../http/errors.js';
+import { toOrder, type OrderRow } from './mappers.js';
+import { toHttpError } from './postgrestError.js';
+import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'orders';
 const COLUMNS =

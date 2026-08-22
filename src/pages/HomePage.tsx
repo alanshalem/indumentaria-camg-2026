@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { LastOrderBanner } from '@/components/checkout/LastOrderBanner';
 import { Hero } from '@/components/layout/Hero';
 import { ProductGrid } from '@/components/products/ProductGrid';
-import { SizeChartViewer, SizeGuide } from '@/components/products/SizeGuide';
+import { SizeGuide } from '@/components/products/SizeGuide';
 import { PromoBanner } from '@/components/promotions/PromoBanner';
 import { lastOrderStorage, type LastOrderRef } from '@/services/lastOrderStorage';
 
@@ -19,7 +19,6 @@ export function HomePage() {
       <PromoBanner />
       <ProductGrid />
       <SizeGuide />
-      <SizeChartViewer />
     </>
   );
 }

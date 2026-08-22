@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { badRequest, payloadTooLarge } from '../http/errors';
-import type { ApiRequest, HttpMethod } from '../http/types';
-import { handleApiRequest } from '../app';
+import { badRequest, payloadTooLarge } from '../http/errors.js';
+import type { ApiRequest, HttpMethod } from '../http/types.js';
+import { handleApiRequest } from '../app.js';
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const API_PREFIX = '/api';

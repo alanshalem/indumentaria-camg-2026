@@ -1,9 +1,9 @@
-import type { PromotionDefinition } from '../../shared/domain/promotions';
-import type { PromotionPatchDto } from '../../shared/schemas/promotion.schema';
-import { notFound } from '../http/errors';
-import { toPromotion, type PromotionRow } from './mappers';
-import { toHttpError } from './postgrestError';
-import { getSupabase } from './supabaseClient';
+import type { PromotionDefinition } from '../../shared/domain/promotions.js';
+import type { PromotionPatchDto } from '../../shared/schemas/promotion.schema.js';
+import { notFound } from '../http/errors.js';
+import { toPromotion, type PromotionRow } from './mappers.js';
+import { toHttpError } from './postgrestError.js';
+import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'promotions';
 const COLUMNS = 'id,kind,label,description,config,is_active,sort_order';

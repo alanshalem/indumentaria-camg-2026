@@ -1,10 +1,10 @@
-import { ROUTES } from '../../../shared/api/contracts';
-import { promotionPatchSchema } from '../../../shared/schemas/promotion.schema';
-import { Router } from '../../http/router';
-import { ok } from '../../http/responses';
-import { parseOrThrow } from '../../http/validate';
-import { adminOnly, isAdminRequest } from '../../security/adminGuard';
-import { promotionsService } from './promotions.service';
+import { ROUTES } from '../../../shared/api/contracts.js';
+import { promotionPatchSchema } from '../../../shared/schemas/promotion.schema.js';
+import { Router } from '../../http/router.js';
+import { ok } from '../../http/responses.js';
+import { parseOrThrow } from '../../http/validate.js';
+import { adminOnly, isAdminRequest } from '../../security/adminGuard.js';
+import { promotionsService } from './promotions.service.js';
 
 export const promotionRoutes = new Router()
   // Lectura pública: el carrito necesita las promos activas para previsualizar

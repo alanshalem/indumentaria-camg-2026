@@ -1,5 +1,5 @@
 import type { PostgrestError } from '@supabase/supabase-js';
-import { conflict, internalError, notFound, type HttpError } from '../http/errors';
+import { conflict, internalError, notFound, type HttpError } from '../http/errors.js';
 
 const UNIQUE_VIOLATION = '23505';
 const NO_ROWS = 'PGRST116';
