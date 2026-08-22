@@ -5,3 +5,6 @@ dist
 .vercel
 .DS_Store
 *.log
+
+# Artefactos de sesiones de Playwright/MCP
+.playwright-mcp

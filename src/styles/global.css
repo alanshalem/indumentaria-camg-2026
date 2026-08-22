@@ -107,3 +107,46 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-track { background: var(--color-bg); }
 ::-webkit-scrollbar-thumb { background: var(--color-surface-2); border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-red-dark); }
+
+.btn-danger {
+  background: transparent;
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.5);
+}
+.btn-danger:hover { background: rgba(255, 107, 107, 0.12); }
+
+/* Foco visible en todo control interactivo: navegar con teclado sin adivinar. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-red-bright);
+  outline-offset: 2px;
+}
+
+.centered-viewport {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.fallback-card {
+  max-width: 420px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px;
+}
+.fallback-card h1 { margin: 0; font-size: 1.3rem; }
+.fallback-card p { margin: 0; color: var(--color-muted); line-height: 1.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

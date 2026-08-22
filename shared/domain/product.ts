@@ -1,0 +1,150 @@
+import type { Ars } from './money';
+import type { SizeChartId } from './sizeCharts';
+
+/**
+ * La lista de precios del club tiene dos columnas —"Talles Grandes" y "Talles
+ * Chicos"— para casi todos los productos. El precio depende del talle elegido,
+ * así que el talle define un *tier* y el tier define el precio.
+ */
+export const SIZE_TIERS = ['small', 'large'] as const;
+export type SizeTier = (typeof SIZE_TIERS)[number];
+
+export const SIZE_TIER_LABELS: Record<SizeTier, string> = {
+  small: 'Talle chico',
+  large: 'Talle grande',
+};
+
+export interface ProductColor {
+  name: string;
+  /** Color de muestra para el chip; los diseños sublimados usan el dominante. */
+  hex: string;
+  /** Foto de esa variante. Si falta, se usa la imagen principal. */
+  imageUrl: string | null;
+}
+
+/** Producto tal como lo consume la UI y lo devuelve la API. */
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  /** Talles 6–16: precio `priceSmall`. */
+  sizesSmall: string[];
+  /** Talles XS–3XL (y talle único): precio `priceLarge`. */
+  sizesLarge: string[];
+  priceSmall: Ars;
+  priceLarge: Ars;
+  /** Vacío = el producto no ofrece elección de color. */
+  colors: ProductColor[];
+  sizeChartId: SizeChartId | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Payload de creación/edición. `id` se deriva del nombre si no viene. */
+export interface ProductInput {
+  id?: string;
+  name: string;
+  description?: string;
+  imageUrl: string;
+  sizesSmall?: string[];
+  sizesLarge?: string[];
+  priceSmall: Ars;
+  priceLarge: Ars;
+  colors?: ProductColor[];
+  sizeChartId?: SizeChartId | null;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export const SIZE_PRESETS = {
+  ninosBuzos: ['6', '8', '10', '12', '14'],
+  ninosRemeras: ['8', '10', '12', '14'],
+  adultosBuzos: ['16/XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
+  adultosPantalones: ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'],
+  adultosRemeras: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+  medias: ['38-42', '42-50'],
+  unico: ['Único'],
+} as const satisfies Record<string, readonly string[]>;
+
+export type SizePresetKey = keyof typeof SIZE_PRESETS;
+
+export const SIZE_PRESET_LABELS: Record<SizePresetKey, string> = {
+  ninosBuzos: 'Niños buzos (6–14)',
+  ninosRemeras: 'Niños remeras (8–14)',
+  adultosBuzos: 'Adultos buzos (16/XS–3XL)',
+  adultosPantalones: 'Adultos pantalón (XS–3XL)',
+  adultosRemeras: 'Adultos remera (XS–XXL)',
+  medias: 'Medias (38-42 / 42-50)',
+  unico: 'Talle único',
+};
+
+/** Todos los talles del producto, en el orden en que se muestran. */
+export const allSizes = (product: Pick<Product, 'sizesSmall' | 'sizesLarge'>): string[] => [
+  ...product.sizesSmall,
+  ...product.sizesLarge,
+];
+
+export function sizeTierOf(
+  product: Pick<Product, 'sizesSmall' | 'sizesLarge'>,
+  size: string,
+): SizeTier | null {
+  if (product.sizesSmall.includes(size)) return 'small';
+  if (product.sizesLarge.includes(size)) return 'large';
+  return null;
+}
+
+export const priceForTier = (
+  product: Pick<Product, 'priceSmall' | 'priceLarge'>,
+  tier: SizeTier,
+): Ars => (tier === 'small' ? product.priceSmall : product.priceLarge);
+
+/** Precio del talle, o `null` si el talle no pertenece al producto. */
+export function priceForSize(
+  product: Pick<Product, 'sizesSmall' | 'sizesLarge' | 'priceSmall' | 'priceLarge'>,
+  size: string,
+): Ars | null {
+  const tier = sizeTierOf(product, size);
+  return tier ? priceForTier(product, tier) : null;
+}
+
+/** Rango a mostrar en la ficha cuando los dos tiers valen distinto. */
+export const priceRange = (
+  product: Pick<Product, 'priceSmall' | 'priceLarge' | 'sizesSmall' | 'sizesLarge'>,
+): { min: Ars; max: Ars; hasRange: boolean } => {
+  const prices = [
+    ...(product.sizesSmall.length ? [product.priceSmall] : []),
+    ...(product.sizesLarge.length ? [product.priceLarge] : []),
+  ];
+  const min = prices.length ? Math.min(...prices) : product.priceLarge;
+  const max = prices.length ? Math.max(...prices) : product.priceLarge;
+  return { min, max, hasRange: min !== max };
+};
+
+export const findColor = (product: Pick<Product, 'colors'>, name: string | null) =>
+  name ? (product.colors.find((color) => color.name === name) ?? null) : null;
+
+/** Imagen a mostrar: la de la variante elegida, con fallback a la principal. */
+export const imageForColor = (product: Product, colorName: string | null): string =>
+  findColor(product, colorName)?.imageUrl ?? product.imageUrl;
+
+const SLUG_INVALID = /[^a-z0-9]+/g;
+const SLUG_EDGES = /^-+|-+$/g;
+
+/** Convierte "Campera 1/2 cierre" -> "campera-1-2-cierre". Determinista e idempotente. */
+export function slugify(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(SLUG_INVALID, '-')
+    .replace(SLUG_EDGES, '')
+    .slice(0, 64);
+}
+
+export function resolveProductId(input: Pick<ProductInput, 'id' | 'name'>): string {
+  const candidate = input.id?.trim() ? input.id : input.name;
+  return slugify(candidate);
+}

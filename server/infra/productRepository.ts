@@ -1,0 +1,89 @@
+import type { Product, ProductInput } from '../../shared/domain/product';
+import { notFound } from '../http/errors';
+import { toProduct, type ProductRow } from './mappers';
+import { toHttpError } from './postgrestError';
+import { getSupabase } from './supabaseClient';
+
+const TABLE = 'products';
+const COLUMNS =
+  'id,name,description,image_url,sizes_small,sizes_large,price_small,price_large,colors,size_chart_id,is_active,sort_order,created_at,updated_at';
+
+export interface ProductRepository {
+  list(options?: { includeInactive?: boolean }): Promise<Product[]>;
+  findById(id: string): Promise<Product | null>;
+  findManyByIds(ids: string[]): Promise<Map<string, Product>>;
+  create(id: string, input: Omit<ProductInput, 'id'>): Promise<Product>;
+  update(id: string, patch: Partial<ProductInput>): Promise<Product>;
+  remove(id: string): Promise<void>;
+}
+
+const toRow = (patch: Partial<ProductInput>): Record<string, unknown> => {
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.description !== undefined) row.description = patch.description;
+  if (patch.imageUrl !== undefined) row.image_url = patch.imageUrl;
+  if (patch.sizesSmall !== undefined) row.sizes_small = patch.sizesSmall;
+  if (patch.sizesLarge !== undefined) row.sizes_large = patch.sizesLarge;
+  if (patch.priceSmall !== undefined) row.price_small = patch.priceSmall;
+  if (patch.priceLarge !== undefined) row.price_large = patch.priceLarge;
+  if (patch.colors !== undefined) row.colors = patch.colors;
+  if (patch.sizeChartId !== undefined) row.size_chart_id = patch.sizeChartId;
+  if (patch.isActive !== undefined) row.is_active = patch.isActive;
+  if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
+  return row;
+};
+
+export const productRepository: ProductRepository = {
+  async list({ includeInactive = false } = {}) {
+    let query = getSupabase().from(TABLE).select(COLUMNS);
+    if (!includeInactive) query = query.eq('is_active', true);
+
+    const { data, error } = await query
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) throw toHttpError(error, 'products.list');
+    return (data as unknown as ProductRow[]).map(toProduct);
+  },
+
+  async findById(id) {
+    const { data, error } = await getSupabase().from(TABLE).select(COLUMNS).eq('id', id).maybeSingle();
+    if (error) throw toHttpError(error, 'products.findById');
+    return data ? toProduct(data as unknown as ProductRow) : null;
+  },
+
+  async findManyByIds(ids) {
+    if (ids.length === 0) return new Map();
+    const { data, error } = await getSupabase().from(TABLE).select(COLUMNS).in('id', ids);
+    if (error) throw toHttpError(error, 'products.findManyByIds');
+    return new Map((data as unknown as ProductRow[]).map((row) => [row.id, toProduct(row)]));
+  },
+
+  async create(id, input) {
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .insert({ id, ...toRow(input) })
+      .select(COLUMNS)
+      .single();
+    if (error) throw toHttpError(error, 'products.create');
+    return toProduct(data as unknown as ProductRow);
+  },
+
+  async update(id, patch) {
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .update({ ...toRow(patch), updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(COLUMNS)
+      .maybeSingle();
+    if (error) throw toHttpError(error, 'products.update');
+    if (!data) throw notFound(`No existe el producto "${id}".`);
+    return toProduct(data as unknown as ProductRow);
+  },
+
+  async remove(id) {
+    const { error, count } = await getSupabase().from(TABLE).delete({ count: 'exact' }).eq('id', id);
+    if (error) throw toHttpError(error, 'products.remove');
+    if (count === 0) throw notFound(`No existe el producto "${id}".`);
+  },
+};

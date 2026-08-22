@@ -77,19 +77,47 @@
   gap: 12px;
 }
 @media (min-width: 768px) {
-  .filters { grid-template-columns: 2fr 1fr 1fr 1fr; align-items: end; }
+  .filters { grid-template-columns: 2fr 1fr 1fr 1fr auto; align-items: end; }
 }
 
-.filterField { display: flex; flex-direction: column; gap: 6px; }
-.filterField label {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--color-muted);
+.filterActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: end;
 }
 
 .loading {
-  text-align: center;
-  padding: 32px 16px;
+  display: flex;
+  justify-content: center;
+  padding: 48px 16px;
+}
+
+/* Pestañas del panel */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: -8px;
+}
+
+.tab {
+  padding: 10px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--color-muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.tab:hover { color: var(--color-text); }
+
+.tabActive {
+  color: var(--color-white);
+  border-bottom-color: var(--color-red);
+}
+
+.statHint {
+  font-size: 0.76rem;
+  color: #7ee2a8;
 }
