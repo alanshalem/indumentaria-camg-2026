@@ -17,22 +17,21 @@ export interface EmailLogEntry {
 }
 
 export interface EmailLogRepository {
-  wasSent(orderCode: string, kind: EmailKind): Promise<boolean>;
+  /** Qué avisos ya salieron para este pedido. Base de la idempotencia. */
+  sentKinds(orderCode: string): Promise<EmailKind[]>;
   record(entry: EmailLogEntry): Promise<void>;
 }
 
 export const emailLogRepository: EmailLogRepository = {
-  async wasSent(orderCode, kind) {
+  async sentKinds(orderCode) {
     const { data, error } = await getSupabase()
       .from(TABLE)
-      .select('id')
+      .select('kind')
       .eq('order_code', orderCode)
-      .eq('kind', kind)
-      .eq('status', 'sent')
-      .maybeSingle();
+      .eq('status', 'sent');
 
-    if (error) throw toHttpError(error, 'emailLog.wasSent');
-    return data !== null;
+    if (error) throw toHttpError(error, 'emailLog.sentKinds');
+    return (data ?? []).map((row) => row.kind as EmailKind);
   },
 
   async record(entry) {

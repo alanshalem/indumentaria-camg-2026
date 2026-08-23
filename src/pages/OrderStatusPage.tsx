@@ -48,7 +48,8 @@ export function OrderStatusPage() {
         <h1>No encontramos ese pedido</h1>
         <p>
           El link puede estar incompleto o vencido. Abrí de nuevo el mail que te mandamos, o
-          escribinos{CLUB.contactPhone ? ` al ${CLUB.contactPhone}` : ''} con tu código de pedido.
+          escribinos {CLUB.contactPhone ? `al ${CLUB.contactPhone}` : `por Instagram (${CLUB.instagram})`}{' '}
+          con tu código de pedido.
         </p>
         <Link to="/" className="btn btn-ghost">
           Ir al catálogo
@@ -58,6 +59,8 @@ export function OrderStatusPage() {
   }
 
   const units = countOrderUnits(order.items);
+  const hasPickupInfo =
+    Boolean(CLUB.pickupAddress) || CLUB.pickupHours.length > 0 || Boolean(CLUB.contactPhone);
 
   return (
     <div className={styles.page}>
@@ -108,7 +111,7 @@ export function OrderStatusPage() {
           </div>
         </section>
 
-        {(CLUB.pickupAddress || CLUB.contactPhone) && (
+        {hasPickupInfo && (
           <section className={styles.card} aria-label="Datos del club">
             <h2 className={styles.sectionTitle}>Retiro</h2>
             <dl className={styles.info}>
@@ -118,10 +121,16 @@ export function OrderStatusPage() {
                   <dd>{CLUB.pickupAddress}</dd>
                 </div>
               )}
-              {CLUB.pickupHours && (
+              {CLUB.pickupHours.length > 0 && (
                 <div>
                   <dt>Horarios</dt>
-                  <dd>{CLUB.pickupHours}</dd>
+                  {/* Un renglón por ventana horaria: son varias y en una sola
+                      línea con separadores no se leen. */}
+                  <dd className={styles.hours}>
+                    {CLUB.pickupHours.map((line) => (
+                      <span key={line}>{line}</span>
+                    ))}
+                  </dd>
                 </div>
               )}
               {CLUB.contactPhone && (

@@ -9,6 +9,7 @@ import {
   type OrderStatus,
 } from '@shared/domain/order';
 import { EMAIL_KIND_LABELS, emailKindForStatus } from '@shared/domain/orderEmails';
+import { describeUpdate } from './statusNotice';
 import { formatPhone, whatsappLink } from '@shared/domain/phone';
 import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
@@ -21,18 +22,38 @@ interface Props {
   onStatusChange: (order: Order) => void;
 }
 
+/**
+ * Qué mail dispara cada estado, en el tooltip del selector.
+ *
+ * Va la tabla completa y no sólo el estado actual: la duda del admin es "si
+ * elijo este otro, ¿le llega algo?", y eso no se puede contestar mirando una
+ * sola fila.
+ */
+const STATUS_HELP = ORDER_STATUSES.map((status) => {
+  const kind = emailKindForStatus(status);
+  return `${ORDER_STATUS_LABELS[status]} → ${kind ? `mail "${EMAIL_KIND_LABELS[kind]}"` : 'no manda mail'}`;
+}).join('\n');
+
 export function OrderTable({ orders, onStatusChange }: Props) {
   const [expandedCode, setExpandedCode] = useState<string | null>(null);
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   async function changeStatus(order: Order, status: OrderStatus) {
     if (status === order.status) return;
     setError('');
+    setNotice('');
     setPendingCode(order.code);
     try {
-      // El servidor decide si corresponde mandar mail y evita duplicados.
-      onStatusChange(await orderService.updateStatus(order.code, status));
+      // El servidor decide si corresponde mandar mail y evita duplicados;
+      // acá sólo se muestra lo que informó que hizo.
+      const update = await orderService.updateStatus(order.code, status);
+      onStatusChange(update.order);
+
+      const described = describeUpdate(update);
+      if (described.tone === 'error') setError(described.text);
+      else setNotice(described.text);
     } catch (caught) {
       setError(errorMessage(caught, 'No se pudo actualizar el estado.'));
     } finally {
@@ -46,6 +67,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
 
   return (
     <>
+      {notice && <Alert tone="success">{notice}</Alert>}
       {error && <Alert>{error}</Alert>}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -100,11 +122,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                           void changeStatus(order, event.target.value as OrderStatus)
                         }
                         aria-label={`Estado del pedido ${order.code}`}
-                        title={
-                          emailKindForStatus(order.status)
-                            ? `Al pasar a este estado se le manda al socio: "${EMAIL_KIND_LABELS[emailKindForStatus(order.status)!]}"`
-                            : 'Este estado no dispara ningún mail'
-                        }
+                        title={STATUS_HELP}
                       >
                         {ORDER_STATUSES.map((status) => (
                           <option key={status} value={status}>

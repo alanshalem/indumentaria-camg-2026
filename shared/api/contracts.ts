@@ -1,3 +1,6 @@
+import type { Order } from '../domain/order.js';
+import type { EmailKind, EmailNotice } from '../domain/orderEmails.js';
+
 export const API_BASE = '/api';
 
 /**
@@ -53,4 +56,19 @@ export interface SessionResponse {
 
 export interface UploadResponse {
   url: string;
+}
+
+/**
+ * Respuesta del cambio de estado.
+ *
+ * Devuelve el pedido y **qué se le avisó al socio**. Sin esto el admin mueve el
+ * estado y no tiene forma de saber si salió un mail, si ya se había mandado o
+ * si el proveedor lo rechazó.
+ */
+export interface OrderStatusUpdate {
+  order: Order;
+  /** El aviso de este estado, o `null` si el estado no dispara ninguno. */
+  notice: EmailNotice | null;
+  /** Avisos de etapas ya superadas que nunca se enviaron. */
+  missed: EmailKind[];
 }

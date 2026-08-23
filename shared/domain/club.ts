@@ -21,8 +21,12 @@ export interface ClubInfo {
   paymentAlias: string;
   /** Dónde se retira el pedido. */
   pickupAddress: string;
-  /** Días y horarios de retiro. */
-  pickupHours: string;
+  /**
+   * Ventanas de retiro: una entrada por bloque de días con el mismo horario.
+   * Es una lista y no un texto con separadores porque el club tiene más de un
+   * horario y cada uno se lee mejor en su propio renglón.
+   */
+  pickupHours: readonly string[];
   /** WhatsApp de contacto del club. */
   contactPhone: string;
   instagram: string;
@@ -33,11 +37,13 @@ export const CLUB: ClubInfo = {
   name: 'Club Atlético Monte Grande',
   shortName: 'CAMG',
 
-  // TODO(club): completar con los datos reales antes de mandar el primer mail.
+  // TODO(club): falta el alias de pago y el WhatsApp. Hasta que estén, el mail
+  // omite esos recuadros en vez de mostrar una etiqueta sin valor.
   paymentAlias: '',
-  pickupAddress: '',
-  pickupHours: '',
   contactPhone: '',
+
+  pickupAddress: 'Hipólito Yrigoyen 77, Monte Grande, Argentina',
+  pickupHours: ['Lunes, miércoles y viernes de 18 a 19', 'Martes y jueves de 17 a 18'],
 
   instagram: '@clubatleticomontegrande',
   instagramUrl: 'https://instagram.com/clubatleticomontegrande',
@@ -47,11 +53,11 @@ export const CLUB: ClubInfo = {
 export const missingClubInfo = (club: ClubInfo = CLUB): string[] =>
   (
     [
-      ['alias de pago', club.paymentAlias],
-      ['dirección de retiro', club.pickupAddress],
-      ['horarios de retiro', club.pickupHours],
-      ['teléfono de contacto', club.contactPhone],
+      ['alias de pago', club.paymentAlias.trim().length > 0],
+      ['dirección de retiro', club.pickupAddress.trim().length > 0],
+      ['horarios de retiro', club.pickupHours.length > 0],
+      ['teléfono de contacto', club.contactPhone.trim().length > 0],
     ] as const
   )
-    .filter(([, value]) => value.trim().length === 0)
+    .filter(([, loaded]) => !loaded)
     .map(([label]) => label);

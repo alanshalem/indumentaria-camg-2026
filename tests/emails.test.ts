@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import type { EmailConfig } from '../server/config/env';
 import { CLUB, missingClubInfo, type ClubInfo } from '../shared/domain/club';
 import type { Order } from '../shared/domain/order';
-import { EMAIL_KINDS, emailKindForStatus } from '../shared/domain/orderEmails';
+import {
+  EMAIL_KINDS,
+  emailKindForStatus,
+  missedNoticeKinds,
+  type EmailKind,
+} from '../shared/domain/orderEmails';
 import { escapeHtml } from '../server/modules/emails/templates/layout';
 import { renderOrderEmail } from '../server/modules/emails/templates/index';
 import { createEmailsService } from '../server/modules/emails/emails.service';
@@ -14,7 +19,7 @@ const club: ClubInfo = {
   ...CLUB,
   paymentAlias: 'camg.club.mp',
   pickupAddress: 'Av. Siempre Viva 123, Monte Grande',
-  pickupHours: 'Lunes a viernes de 18 a 21',
+  pickupHours: ['Lunes a viernes de 18 a 21', 'Sábados de 10 a 13'],
   contactPhone: '11 2345-6789',
 };
 
@@ -71,7 +76,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
 
 describe('datos del club', () => {
   it('detecta cuales faltan cargar', () => {
-    const vacio = { ...CLUB, paymentAlias: '', pickupAddress: '', pickupHours: '', contactPhone: '' };
+    const vacio = { ...CLUB, paymentAlias: '', pickupAddress: '', pickupHours: [], contactPhone: '' };
     expect(missingClubInfo(vacio)).toEqual([
       'alias de pago',
       'dirección de retiro',
@@ -130,6 +135,45 @@ describe('plantillas de mail', () => {
         expect(output).toContain('Ana');
         expect(output).toContain('Campera Canguro CAMG');
       }
+    }
+  });
+
+  it('todas dicen donde y cuando se retira', () => {
+    for (const kind of EMAIL_KINDS) {
+      const { html, text } = renderOrderEmail(kind, context);
+
+      for (const output of [html, text]) {
+        expect(output).toContain(club.pickupAddress);
+        // Las dos ventanas horarias, no solo la primera.
+        for (const franja of club.pickupHours) expect(output).toContain(franja);
+      }
+    }
+  });
+
+  it('omite el dato que el club todavia no cargo, sin dejar la etiqueta suelta', () => {
+    const sinTelefono = { ...context, club: { ...club, contactPhone: '' } };
+
+    for (const kind of EMAIL_KINDS) {
+      const { html, text } = renderOrderEmail(kind, sinTelefono);
+
+      // La etiqueta sin valor es peor que no mostrar nada: parece un mail roto.
+      expect(html).not.toContain('Consultas');
+      expect(text).not.toContain('Consultas');
+      // El resto del recuadro sigue en pie.
+      expect(html).toContain(club.pickupAddress);
+    }
+  });
+
+  it('el texto plano separa los bloques con renglones en blanco', () => {
+    for (const kind of EMAIL_KINDS) {
+      const { text } = renderOrderEmail(kind, context);
+
+      // Sin separadores el mail queda como un parrafo unico e ilegible.
+      expect(text).toMatch(/\n\n/);
+      // Y nunca tres saltos seguidos, que es el hueco que deja un bloque vacio.
+      expect(text).not.toMatch(/\n\n\n/);
+      expect(text.startsWith('\n')).toBe(false);
+      expect(text.endsWith('\n')).toBe(false);
     }
   });
 
@@ -257,12 +301,13 @@ function fakeTransport(result: SendResult = { status: 'sent', providerId: 're_1'
   return { transport, sent };
 }
 
-function fakeLog(alreadySent: boolean = false) {
+function fakeLog(yaEnviados: EmailKind[] = []) {
   const records: EmailLogEntry[] = [];
   const repository: EmailLogRepository = {
-    wasSent: async () => alreadySent,
+    sentKinds: async () => yaEnviados,
     record: async (entry) => {
       records.push(entry);
+      if (entry.status === 'sent') yaEnviados.push(entry.kind);
     },
   };
   return { repository, records };
@@ -293,7 +338,7 @@ describe('emailsService', () => {
 
   it('no repite un aviso ya enviado', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository } = fakeLog(true);
+    const { repository } = fakeLog(['paymentConfirmed']);
 
     await createEmailsService(transport, repository).notifyStatus(order({ status: 'paid' }));
 
@@ -314,24 +359,95 @@ describe('emailsService', () => {
     const { transport } = fakeTransport({ status: 'failed', error: 'Resend respondió 500.' });
     const { repository, records } = fakeLog();
 
-    await expect(
-      createEmailsService(transport, repository).notifyStatus(order()),
-    ).resolves.toBeUndefined();
+    const notice = await createEmailsService(transport, repository).notifyStatus(order());
 
     expect(records[0]).toMatchObject({ status: 'failed', error: 'Resend respondió 500.' });
+    // El panel necesita el motivo: sin esto el admin ve "no pasó nada".
+    expect(notice).toMatchObject({ status: 'failed', reason: 'Resend respondió 500.' });
   });
 
   it('un error inesperado del repositorio tampoco tumba la operación', async () => {
     const { transport } = fakeTransport();
     const roto: EmailLogRepository = {
-      wasSent: async () => {
+      sentKinds: async () => {
         throw new Error('base caída');
       },
       record: async () => {},
-      };
+    };
 
-    await expect(
-      createEmailsService(transport, roto).notifyStatus(order()),
-    ).resolves.toBeUndefined();
+    const notice = await createEmailsService(transport, roto).notifyStatus(order());
+
+    expect(notice).toMatchObject({ status: 'failed', reason: 'base caída' });
+  });
+});
+
+describe('que se le aviso al socio', () => {
+  it('notifyStatus devuelve el aviso que salio', async () => {
+    const { transport } = fakeTransport();
+    const { repository } = fakeLog();
+
+    const notice = await createEmailsService(transport, repository).notifyStatus(
+      order({ status: 'paid' }),
+    );
+
+    expect(notice).toEqual({
+      kind: 'paymentConfirmed',
+      status: 'sent',
+      recipient: 'ana@ejemplo.com',
+    });
+  });
+
+  it('avisa que ya se habia mandado en vez de callarse', async () => {
+    const { transport, sent } = fakeTransport();
+    const { repository } = fakeLog(['paymentConfirmed']);
+
+    const notice = await createEmailsService(transport, repository).notifyStatus(
+      order({ status: 'paid' }),
+    );
+
+    expect(sent).toHaveLength(0);
+    expect(notice).toMatchObject({ status: 'already', kind: 'paymentConfirmed' });
+  });
+
+  it('un estado sin aviso devuelve null, que no es lo mismo que un fallo', async () => {
+    const { transport } = fakeTransport();
+    const { repository } = fakeLog();
+
+    const notice = await createEmailsService(transport, repository).notifyStatus(
+      order({ status: 'delivered' }),
+    );
+
+    expect(notice).toBeNull();
+  });
+
+  it('missedNotices lista los avisos de etapas ya pasadas que nunca salieron', async () => {
+    const { transport } = fakeTransport();
+    // Caso real: el admin marco "Entregado" directo desde "Pendiente".
+    const { repository } = fakeLog(['orderReceived']);
+
+    const missed = await createEmailsService(transport, repository).missedNotices(
+      order({ status: 'delivered' }),
+    );
+
+    expect(missed).toEqual(['paymentConfirmed', 'readyForPickup']);
+  });
+});
+
+describe('missedNoticeKinds', () => {
+  it('no cuenta las etapas que el pedido todavia no alcanzo', () => {
+    // Recien pago: que no haya recibido "listo para retirar" es lo esperado.
+    expect(missedNoticeKinds('paid', ['orderReceived', 'paymentConfirmed'])).toEqual([]);
+  });
+
+  it('marca lo que quedo sin mandar de las etapas ya superadas', () => {
+    expect(missedNoticeKinds('ready', ['orderReceived'])).toEqual([
+      'paymentConfirmed',
+      'readyForPickup',
+    ]);
+  });
+
+  it('entregado exige los tres avisos: es el final del recorrido', () => {
+    expect(missedNoticeKinds('delivered', [])).toEqual(EMAIL_KINDS);
+    expect(missedNoticeKinds('delivered', [...EMAIL_KINDS])).toEqual([]);
   });
 });

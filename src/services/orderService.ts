@@ -1,4 +1,4 @@
-import { ROUTES } from '@shared/api/contracts';
+import { ROUTES, type OrderStatusUpdate } from '@shared/api/contracts';
 import type { CreateOrderInput, Order, OrderStatus, PublicOrder } from '@shared/domain/order';
 import type { OrderQueryDto } from '@shared/schemas/order.schema';
 import { httpClient } from './httpClient';
@@ -24,6 +24,7 @@ export const orderService = {
   getPublic: (code: string, token: string) =>
     httpClient.get<PublicOrder>(ROUTES.orders.byCode(code), { query: { t: token } }),
 
+  /** Devuelve el pedido y qué aviso salió: el panel necesita poder decirlo. */
   updateStatus: (code: string, status: OrderStatus) =>
-    httpClient.patch<Order>(ROUTES.orders.byCode(code), { status }),
+    httpClient.patch<OrderStatusUpdate>(ROUTES.orders.byCode(code), { status }),
 };

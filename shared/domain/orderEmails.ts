@@ -1,4 +1,4 @@
-import type { OrderStatus } from './order.js';
+import { ORDER_STATUSES, type OrderStatus } from './order.js';
 
 /**
  * Mails transaccionales del pedido.
@@ -28,3 +28,33 @@ export const EMAIL_FOR_STATUS: Partial<Record<OrderStatus, EmailKind>> = {
 
 export const emailKindForStatus = (status: OrderStatus): EmailKind | null =>
   EMAIL_FOR_STATUS[status] ?? null;
+
+/**
+ * Qué pasó con un aviso. El admin lo necesita en el momento del cambio: antes,
+ * un estado que no manda nada era indistinguible de un envío que falló en
+ * silencio, y la única forma de saberlo era mirar la tabla `email_log`.
+ */
+export type EmailNoticeStatus = 'sent' | 'already' | 'skipped' | 'failed';
+
+export interface EmailNotice {
+  kind: EmailKind;
+  status: EmailNoticeStatus;
+  recipient: string;
+  /** Por qué no salió. Sólo viene en 'skipped' y 'failed'. */
+  reason?: string;
+}
+
+/**
+ * Avisos que correspondían a etapas que el pedido ya pasó y nunca salieron.
+ *
+ * Es el agujero que deja saltear estados: si el admin marca "Entregado" sin
+ * pasar por "Pago confirmado", ese mail no se manda nunca y nadie se entera.
+ * Acá se calcula para poder decirlo.
+ */
+export const missedNoticeKinds = (
+  status: OrderStatus,
+  sent: readonly EmailKind[],
+): EmailKind[] =>
+  ORDER_STATUSES.slice(0, ORDER_STATUSES.indexOf(status) + 1)
+    .map(emailKindForStatus)
+    .filter((kind): kind is EmailKind => kind !== null && !sent.includes(kind));

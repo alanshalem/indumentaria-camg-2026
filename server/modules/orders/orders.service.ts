@@ -7,6 +7,7 @@ import {
   type OrderStatus,
   type PublicOrder,
 } from '../../../shared/domain/order.js';
+import type { OrderStatusUpdate } from '../../../shared/api/contracts.js';
 import { generateOrderCode } from '../../../shared/domain/orderCode.js';
 import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product.js';
 import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions.js';
@@ -29,7 +30,7 @@ export interface OrdersService {
   /** Seguimiento público: sólo lo abre quien tiene el link firmado del mail. */
   findPublic(code: string, token: string): Promise<PublicOrder>;
   create(input: CreateOrderInput): Promise<Order>;
-  updateStatus(code: string, status: OrderStatus): Promise<Order>;
+  updateStatus(code: string, status: OrderStatus): Promise<OrderStatusUpdate>;
 }
 
 export function createOrdersService(
@@ -90,9 +91,15 @@ export function createOrdersService(
     },
 
     async updateStatus(code, status) {
-      const updated = await orders.updateStatus(code, status);
-      await emails.notifyStatus(updated);
-      return updated;
+      const order = await orders.updateStatus(code, status);
+      const notice = await emails.notifyStatus(order);
+
+      // Lo que el socio nunca recibió. Saltear etapas —marcar "Entregado" sin
+      // pasar por "Pago confirmado"— deja esos avisos sin mandar para siempre;
+      // devolverlos es la única forma de que el panel lo pueda decir.
+      const missed = await emails.missedNotices(order);
+
+      return { order, notice, missed };
     },
   };
 }

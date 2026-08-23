@@ -318,17 +318,21 @@ Editás `shared/domain/club.ts` y deployás:
 export const CLUB: ClubInfo = {
   name: 'Club Atlético Monte Grande',
   shortName: 'CAMG',
-  paymentAlias: '',      // ← alias de transferencia
-  pickupAddress: '',     // ← dónde se retira
-  pickupHours: '',       // ← días y horarios
-  contactPhone: '',      // ← WhatsApp del club
+
+  paymentAlias: '',      // ← FALTA: alias de transferencia
+  contactPhone: '',      // ← FALTA: WhatsApp del club
+
+  pickupAddress: 'Hipólito Yrigoyen 77, Monte Grande, Argentina',
+  // Una entrada por bloque de días: cada una va en su propio renglón.
+  pickupHours: ['Lunes, miércoles y viernes de 18 a 19', 'Martes y jueves de 17 a 18'],
   ...
 };
 ```
 
-Un campo vacío **no rompe nada**: el mail omite ese recuadro entero en vez de
-mostrar una etiqueta sin valor. `npm run email:test` avisa cuáles faltan antes
-de enviar.
+Un campo vacío **no rompe nada**: el mail omite esa fila —o el recuadro entero,
+si no queda ninguna— en vez de mostrar una etiqueta sin valor. Cuando cargues el
+WhatsApp aparece solo en los tres mails y en la página de seguimiento.
+`npm run email:test` avisa cuáles faltan antes de enviar.
 
 ---
 

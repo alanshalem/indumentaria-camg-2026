@@ -9,6 +9,7 @@ import type { PromotionRepository } from '../server/infra/promotionRepository';
 import type { EmailsService } from '../server/modules/emails/emails.service';
 import { createOrdersService } from '../server/modules/orders/orders.service';
 import { HttpError } from '../server/http/errors';
+import { emailKindForStatus, type EmailKind } from '../shared/domain/orderEmails';
 import { signOrderToken } from '../server/security/orderToken';
 
 const product = (overrides: Partial<Product> = {}): Product => ({
@@ -78,13 +79,16 @@ const fakePromotions = (definitions: PromotionDefinition[] = []): PromotionRepos
 });
 
 /** Espia de mails: registra a que estado se le aviso, sin tocar la red. */
-function fakeEmails(): EmailsService & { notified: OrderStatus[] } {
+function fakeEmails(missed: EmailKind[] = []): EmailsService & { notified: OrderStatus[] } {
   const notified: OrderStatus[] = [];
   return {
     notified,
     notifyStatus: async (order) => {
       notified.push(order.status);
+      const kind = emailKindForStatus(order.status);
+      return kind ? { kind, status: 'sent', recipient: order.email ?? '' } : null;
     },
+    missedNotices: async () => missed,
   };
 }
 
@@ -327,5 +331,52 @@ describe('ordersService.findPublic', () => {
     expect(noSuchOrder.code).toBe('NOT_FOUND');
     expect(badToken.code).toBe(noSuchOrder.code);
     expect(badToken.message).toBe(noSuchOrder.message);
+  });
+});
+
+describe('ordersService.updateStatus · que informa', () => {
+  const build = (missed: EmailKind[] = []) => {
+    const emails = fakeEmails(missed);
+    const service = createOrdersService(
+      fakeOrders(),
+      fakeProducts([product()]),
+      fakePromotions(),
+      emails,
+    );
+    return { service, emails };
+  };
+
+  const nuevo = (service: ReturnType<typeof createOrdersService>) =>
+    service.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }] });
+
+  it('devuelve el pedido y el aviso que salio', async () => {
+    const { service } = build();
+    const created = await nuevo(service);
+
+    const update = await service.updateStatus(created.code, 'paid');
+
+    expect(update.order.status).toBe('paid');
+    expect(update.notice).toMatchObject({ kind: 'paymentConfirmed', status: 'sent' });
+    expect(update.missed).toEqual([]);
+  });
+
+  it('un estado sin aviso se distingue de un fallo: notice queda en null', async () => {
+    const { service } = build();
+    const created = await nuevo(service);
+
+    const update = await service.updateStatus(created.code, 'delivered');
+
+    expect(update.notice).toBeNull();
+  });
+
+  it('devuelve los avisos que quedaron sin mandar al saltear etapas', async () => {
+    // El caso que confundio al club: marcar "Entregado" directo desde
+    // "Pendiente" no manda nada, y sin esto el panel no lo dice.
+    const { service } = build(['paymentConfirmed', 'readyForPickup']);
+    const created = await nuevo(service);
+
+    const update = await service.updateStatus(created.code, 'delivered');
+
+    expect(update.missed).toEqual(['paymentConfirmed', 'readyForPickup']);
   });
 });

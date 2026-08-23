@@ -1,6 +1,6 @@
 import type { EmailConfig } from '../../../config/env.js';
 import { formatPrice } from '../../../../shared/domain/money.js';
-import { CLUB } from '../../../../shared/domain/club.js';
+import { CLUB, type ClubInfo } from '../../../../shared/domain/club.js';
 import type { Order } from '../../../../shared/domain/order.js';
 import type { EmailKind } from '../../../../shared/domain/orderEmails.js';
 import { PAGES } from '../../../../shared/api/contracts.js';
@@ -42,6 +42,35 @@ const firstName = (order: Order) => order.customerName.trim().split(/\s+/)[0] ??
 /** Pie común: cómo identificarse al retirar. */
 const PICKUP_NOTE = 'Guardá el código: te lo van a pedir en la sede al momento de retirar.';
 
+/**
+ * Dónde y cuándo se retira. Va en los tres mails: el socio lo tiene a mano sin
+ * buscar el que llegó primero, y cuando el club cargue el WhatsApp aparece solo.
+ *
+ * `infoBox` descarta las filas vacías, así que un dato que todavía no está
+ * (hoy el WhatsApp) desaparece en vez de dejar una etiqueta huérfana.
+ */
+const pickupBox = (club: ClubInfo): string =>
+  infoBox('Dónde se retira', [
+    ['Dirección', club.pickupAddress],
+    // Una fila por ventana horaria; la etiqueta va sólo en la primera.
+    ...club.pickupHours.map((line, index) => [index === 0 ? 'Horarios' : '', line] as const),
+    ['Consultas', club.contactPhone],
+  ]);
+
+/** Lo mismo en texto plano. Devuelve sólo los renglones con dato cargado. */
+const pickupText = (club: ClubInfo): string[] => [
+  ...(club.pickupAddress ? [`Dirección: ${club.pickupAddress}`] : []),
+  ...(club.pickupHours.length ? ['Horarios:', ...club.pickupHours.map((line) => `  ${line}`)] : []),
+  ...(club.contactPhone ? [`Consultas: ${club.contactPhone}`] : []),
+];
+
+/**
+ * Une el texto plano colapsando los saltos de más: si un bloque sale vacío
+ * porque falta el dato, no deja un hueco doble en el medio del mail.
+ */
+const plainText = (lines: readonly string[]): string =>
+  lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+
 // ---------------------------------------------------------------------------
 //  1 · Pedido recibido (estado: pendiente de pago)
 // ---------------------------------------------------------------------------
@@ -76,12 +105,13 @@ const orderReceived: Template = ({ order, email, club = CLUB }) => {
         // El recuadro va primero: el texto lo referencia como "el alias de arriba".
         payment,
         paymentHint,
+        pickupBox(club),
         button('Ver el estado de mi pedido', statusLink(order, email.siteUrl)),
         muted(PICKUP_NOTE),
       ].join('\n'),
       footerNote: 'Recibiste este mail porque generaste un pedido en la tienda del club.',
     }),
-    text: [
+    text: plainText([
       `¡Gracias, ${firstName(order)}!`,
       '',
       'Recibimos tu pedido de indumentaria del club. Todavía no está confirmado: falta el pago.',
@@ -95,10 +125,13 @@ const orderReceived: Template = ({ order, email, club = CLUB }) => {
         ? `Para confirmarlo, transferí ${formatPrice(order.total)} al alias ${club.paymentAlias} usando ${order.code} como referencia.`
         : 'En breve te contactamos por WhatsApp para pasarte los datos de pago.',
       '',
+      'DÓNDE SE RETIRA',
+      ...pickupText(club),
+      '',
       `Seguí tu pedido acá: ${statusLink(order, email.siteUrl)}`,
       '',
       PICKUP_NOTE,
-    ].join('\n'),
+    ]),
   };
 };
 
@@ -119,15 +152,12 @@ const paymentConfirmed: Template = ({ order, email, club = CLUB }) => ({
       codeBlock(order.code),
       itemsTable(order),
       paragraph('Te vamos a escribir de nuevo apenas la prenda llegue a la sede y puedas pasar a retirarla.'),
+      pickupBox(club),
       button('Ver el estado de mi pedido', statusLink(order, email.siteUrl)),
-      infoBox('Consultas', [
-        ['WhatsApp', club.contactPhone],
-        ['Referencia', order.code],
-      ]),
       muted(PICKUP_NOTE),
     ].join('\n'),
   }),
-  text: [
+  text: plainText([
     `Pago confirmado, ${firstName(order)}`,
     '',
     `Recibimos tu pago de ${formatPrice(order.total)}. Tu pedido ya está encargado.`,
@@ -139,10 +169,13 @@ const paymentConfirmed: Template = ({ order, email, club = CLUB }) => ({
     '',
     'Te escribimos de nuevo apenas la prenda llegue a la sede.',
     '',
+    'DÓNDE SE RETIRA',
+    ...pickupText(club),
+    '',
     `Seguí tu pedido acá: ${statusLink(order, email.siteUrl)}`,
     '',
     PICKUP_NOTE,
-  ].join('\n'),
+  ]),
 });
 
 // ---------------------------------------------------------------------------
@@ -158,26 +191,22 @@ const readyForPickup: Template = ({ order, email, club = CLUB }) => ({
       heading(`Ya podés pasar a buscarlo, ${firstName(order)}`),
       paragraph('Tu pedido llegó a la sede del club y está esperándote.'),
       codeBlock(order.code),
-      infoBox('Dónde y cuándo', [
-        ['Dirección', club.pickupAddress],
-        ['Horarios', club.pickupHours],
-        ['Consultas', club.contactPhone],
-      ]),
+      pickupBox(club),
       itemsTable(order),
       paragraph('Mostrá el código al retirar. Si va otra persona en tu lugar, alcanza con que lleve el código.'),
       button('Ver el estado de mi pedido', statusLink(order, email.siteUrl)),
     ].join('\n'),
     footerNote: 'Si ya lo retiraste, ignorá este mail.',
   }),
-  text: [
+  text: plainText([
     `Ya podés pasar a buscarlo, ${firstName(order)}`,
     '',
     'Tu pedido llegó a la sede del club y está esperándote.',
     '',
     `CÓDIGO DE PEDIDO: ${order.code}`,
     '',
-    club.pickupAddress ? `Dirección: ${club.pickupAddress}` : '',
-    club.pickupHours ? `Horarios: ${club.pickupHours}` : '',
+    'DÓNDE SE RETIRA',
+    ...pickupText(club),
     '',
     'TU PEDIDO',
     itemsText(order),
@@ -185,9 +214,7 @@ const readyForPickup: Template = ({ order, email, club = CLUB }) => ({
     'Mostrá el código al retirar.',
     '',
     `Seguí tu pedido acá: ${statusLink(order, email.siteUrl)}`,
-  ]
-    .filter((line) => line !== '')
-    .join('\n'),
+  ]),
 });
 
 // ---------------------------------------------------------------------------
