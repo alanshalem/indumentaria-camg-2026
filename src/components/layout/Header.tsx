@@ -1,21 +1,54 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PAGES } from '@shared/api/contracts';
 import { cartUnitCount, useCartStore } from '@/store/cartStore';
+import { useSizeChartStore } from '@/store/sizeChartStore';
+import { lastOrderStorage, type LastOrderRef } from '@/services/lastOrderStorage';
 import styles from './Header.module.css';
+import { Picture } from '@/ui/Picture';
 
 export function Header() {
   const unitCount = useCartStore((state) => cartUnitCount(state.lines));
   const openCart = useCartStore((state) => state.openCart);
+  const openSizeChart = useSizeChartStore((state) => state.open);
+
+  // El seguimiento sólo aparece si este navegador tiene un pedido guardado:
+  // un link a "mi pedido" que no lleva a ninguno es peor que no tenerlo.
+  const [lastOrder, setLastOrder] = useState<LastOrderRef | null>(null);
+  useEffect(() => setLastOrder(lastOrderStorage.read()), []);
 
   return (
     <header className={styles.header}>
       <div className={`container ${styles.inner}`}>
         <Link to="/" className={styles.brand}>
-          <img src="/images/logo-club.png" alt="Club Atlético Monte Grande" className={styles.logo} />
+          <Picture
+            src="/images/logo-club.png"
+            alt="Club Atlético Monte Grande"
+            sizes="44px"
+            className={styles.logo}
+            eager
+          />
           <div className={styles.brandText}>
             <span className={styles.brandTitle}>Club Atlético</span>
             <span className={styles.brandSub}>Monte Grande</span>
           </div>
         </Link>
+
+        <nav className={styles.nav} aria-label="Accesos">
+          {/* Las dos cosas que un socio busca y que antes sólo se encontraban
+              scrolleando hasta el fondo o volviendo al mail. */}
+          <button type="button" className={styles.navLink} onClick={() => openSizeChart('buzos')}>
+            Guía de talles
+          </button>
+          {lastOrder?.token && (
+            <Link
+              to={PAGES.orderStatus(lastOrder.code, lastOrder.token)}
+              className={styles.navLink}
+            >
+              Mi pedido
+            </Link>
+          )}
+        </nav>
 
         <button
           type="button"

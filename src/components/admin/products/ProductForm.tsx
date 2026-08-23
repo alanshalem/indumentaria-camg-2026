@@ -1,8 +1,11 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { formatPrice } from '@shared/domain/money.js';
 import {
+  PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_LABELS,
   resolveProductId,
   type Product,
+  type ProductCategory,
   type ProductColor,
   type ProductInput,
 } from '@shared/domain/product.js';
@@ -35,6 +38,7 @@ interface FormState {
   priceLarge: string;
   colors: ProductColor[];
   sizeChartId: SizeChartId | '';
+  category: ProductCategory;
   isActive: boolean;
   sortOrder: string;
 }
@@ -50,6 +54,7 @@ const emptyForm = (): FormState => ({
   priceLarge: '',
   colors: [],
   sizeChartId: '',
+  category: 'abrigo',
   isActive: true,
   sortOrder: '0',
 });
@@ -65,6 +70,7 @@ const toForm = (product: Product): FormState => ({
   priceLarge: String(product.priceLarge),
   colors: product.colors.map((color) => ({ ...color })),
   sizeChartId: product.sizeChartId ?? '',
+  category: product.category,
   isActive: product.isActive,
   sortOrder: String(product.sortOrder),
 });
@@ -124,6 +130,7 @@ export function ProductForm({ product, onSaved, onCancel }: Props) {
       priceLarge: Number(form.priceLarge),
       colors: form.colors,
       sizeChartId: form.sizeChartId || null,
+      category: form.category,
       isActive: form.isActive,
       sortOrder: Number(form.sortOrder) || 0,
     };
@@ -243,6 +250,19 @@ export function ProductForm({ product, onSaved, onCancel }: Props) {
           error={fieldErrors['sizesLarge']}
           onChange={(sizes) => patch('sizesLarge', sizes)}
         />
+
+        <SelectField
+          label="Categoría *"
+          value={form.category}
+          onChange={(event) => patch('category', event.target.value as ProductCategory)}
+          hint="Agrupa el producto en el filtro del catálogo."
+        >
+          {PRODUCT_CATEGORIES.map((id) => (
+            <option key={id} value={id}>
+              {PRODUCT_CATEGORY_LABELS[id]}
+            </option>
+          ))}
+        </SelectField>
 
         <SelectField
           label="Tabla de talles"

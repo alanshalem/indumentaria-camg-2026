@@ -7,13 +7,13 @@ import {
   type OrderStatus,
   type PublicOrder,
 } from '../../../shared/domain/order.js';
-import type { OrderStatusUpdate } from '../../../shared/api/contracts.js';
+import type { OrderCreated, OrderPage, OrderStatusUpdate } from '../../../shared/api/contracts.js';
 import { generateOrderCode } from '../../../shared/domain/orderCode.js';
 import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product.js';
 import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions.js';
 import type { OrderQueryDto } from '../../../shared/schemas/order.schema.js';
 import { conflict, internalError, isHttpError, notFound, validationError } from '../../http/errors.js';
-import { verifyOrderToken } from '../../security/orderToken.js';
+import { signOrderToken, verifyOrderToken } from '../../security/orderToken.js';
 import { orderRepository, type OrderRepository } from '../../infra/orderRepository.js';
 import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
 import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
@@ -26,10 +26,10 @@ const cryptoRandomInts = (count: number, max: number): number[] =>
   Array.from({ length: count }, () => randomInt(max));
 
 export interface OrdersService {
-  list(filters: OrderQueryDto): Promise<Order[]>;
+  list(filters: OrderQueryDto): Promise<OrderPage>;
   /** Seguimiento público: sólo lo abre quien tiene el link firmado del mail. */
   findPublic(code: string, token: string): Promise<PublicOrder>;
-  create(input: CreateOrderInput): Promise<Order>;
+  create(input: CreateOrderInput): Promise<OrderCreated>;
   updateStatus(code: string, status: OrderStatus): Promise<OrderStatusUpdate>;
 }
 
@@ -82,7 +82,11 @@ export function createOrdersService(
           // El pedido ya está guardado: el aviso es un efecto posterior que
           // nunca puede hacer fallar el checkout.
           await emails.notifyStatus(saved);
-          return saved;
+
+          // El mismo token que va en el mail. Se lo damos a quien acaba de
+          // generar el pedido para que el navegador pueda guardarlo y volver
+          // al seguimiento sin depender de encontrar el mail.
+          return { order: saved, statusToken: signOrderToken(saved.code) };
         } catch (error) {
           if (!isHttpError(error) || error.code !== 'CONFLICT') throw error;
         }

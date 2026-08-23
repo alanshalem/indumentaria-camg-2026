@@ -58,3 +58,13 @@ export const missedNoticeKinds = (
   ORDER_STATUSES.slice(0, ORDER_STATUSES.indexOf(status) + 1)
     .map(emailKindForStatus)
     .filter((kind): kind is EmailKind => kind !== null && !sent.includes(kind));
+
+/** Una línea del historial de avisos, como la lee el panel. */
+export interface EmailLogRecord {
+  kind: EmailKind;
+  status: 'sent' | 'failed' | 'skipped';
+  recipient: string;
+  error: string | null;
+  /** Epoch ms del intento. */
+  at: number;
+}

@@ -4,7 +4,9 @@ import { formatPrice } from '@shared/domain/money';
 import {
   allSizes,
   imageForColor,
+  initialSize,
   priceForTier,
+  priceRange,
   sizeTierOf,
   type Product,
 } from '@shared/domain/product';
@@ -13,13 +15,14 @@ import { productPath } from '@/app/paths';
 import { useCartStore } from '@/store/cartStore';
 import { useCatalogStore } from '@/store/catalogStore';
 import { Button, ChipGroup, ColorSwatches } from '@/ui';
+import { Picture } from '@/ui/Picture';
 import styles from './ProductCard.module.css';
 
 const FEEDBACK_MS = 1600;
 
 export function ProductCard({ product }: { product: Product }) {
   const sizes = useMemo(() => allSizes(product), [product]);
-  const [size, setSize] = useState(() => sizes[0] ?? '');
+  const [size, setSize] = useState(() => initialSize(product));
   const [color, setColor] = useState<string | null>(() => product.colors[0]?.name ?? null);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -28,9 +31,11 @@ export function ProductCard({ product }: { product: Product }) {
   const promotions = useCatalogStore((state) => state.promotions);
 
   // El precio es el del talle elegido, sin etiquetas al lado: el número que se
-  // ve es el que se paga.
+  // ve es el que se paga. Sin talle elegido todavía no hay un precio único, así
+  // que se muestra "Desde" en vez de mentir con el más barato.
   const tier = sizeTierOf(product, size);
-  const unitPrice = tier ? priceForTier(product, tier) : product.priceLarge;
+  const unitPrice = tier ? priceForTier(product, tier) : null;
+  const range = useMemo(() => priceRange(product), [product]);
   const image = imageForColor(product, color);
 
   const combo = promotions.find((promotion) => promotionNamesProduct(promotion, product.id));
@@ -38,13 +43,15 @@ export function ProductCard({ product }: { product: Product }) {
   function handleAdd() {
     if (!tier) return;
     addLine({
+      // Después del guard el tier existe, así que el precio se resuelve acá y
+      // no depende del `unitPrice` que la vista deja en null sin talle elegido.
+      unitPrice: priceForTier(product, tier),
       productId: product.id,
       productName: product.name,
       size,
       sizeTier: tier,
       color,
       quantity: 1,
-      unitPrice,
       image,
     });
     setJustAdded(true);
@@ -55,7 +62,11 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className={styles.card}>
       <Link to={productPath(product.id)} className={styles.media} aria-label={`Ver ${product.name}`}>
-        <img src={image} alt={product.name} loading="lazy" />
+        <Picture
+          src={image}
+          alt={product.name}
+          sizes="(max-width: 700px) 92vw, (max-width: 1100px) 46vw, 31vw"
+        />
         {combo && <span className={styles.badge}>{combo.label}</span>}
         <span className={styles.mediaHint}>Ver detalle</span>
       </Link>
@@ -68,7 +79,10 @@ export function ProductCard({ product }: { product: Product }) {
           {product.description && <p className={styles.desc}>{product.description}</p>}
         </div>
 
-        <p className={styles.price}>{formatPrice(unitPrice)}</p>
+        <p className={styles.price}>
+          {unitPrice === null && range.hasRange && <span className={styles.from}>Desde</span>}
+          {formatPrice(unitPrice ?? range.min)}
+        </p>
 
         {product.colors.length > 0 && (
           <div className={styles.field}>
@@ -93,7 +107,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
 
         <Button block onClick={handleAdd} disabled={!tier} className={styles.cta}>
-          {justAdded ? '✓ Agregado' : 'Agregar al carrito'}
+          {justAdded ? '✓ Agregado' : tier ? 'Agregar al carrito' : 'Elegí un talle'}
         </Button>
       </div>
     </article>

@@ -118,6 +118,18 @@
   overflow: hidden;
 }
 
+/* "Desde" antes del número: se muestra sólo mientras no hay talle elegido y el
+   precio todavía depende de cuál elija. */
+.from {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.62em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  vertical-align: 0.18em;
+}
+
 .price {
   margin: 0;
   font-size: 1.65rem;

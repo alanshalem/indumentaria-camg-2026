@@ -1,6 +1,7 @@
 import { formatPrice } from '@shared/domain/money.js';
 import { sizeRangeLabel, type Product } from '@shared/domain/product.js';
 import { EmptyState } from '@/ui';
+import { Picture } from '@/ui/Picture';
 import styles from './ProductTable.module.css';
 
 interface Props {
@@ -73,7 +74,7 @@ export function ProductTable({ products, busyId, onEdit, onToggleActive, onDelet
             return (
               <tr key={product.id} className={product.isActive ? '' : styles.inactiveRow}>
                 <td>
-                  <img className={styles.thumb} src={product.imageUrl} alt="" loading="lazy" />
+                  <Picture className={styles.thumb} src={product.imageUrl} alt="" sizes="48px" />
                 </td>
 
                 <td>

@@ -14,7 +14,8 @@
     "db:seed": "node scripts/db.mjs seed",
     "db:setup": "node scripts/db.mjs setup",
     "db:check": "node scripts/db.mjs check",
-    "email:test": "vite-node scripts/emailTest.ts"
+    "email:test": "vite-node scripts/emailTest.ts",
+    "images": "vite-node scripts/optimizeImages.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.3.1",
     "pg": "^8.23.0",
+    "sharp": "^0.35.3",
     "typescript": "^5.9.3",
     "vite": "^5.4.8",
     "vite-node": "^6.0.0",

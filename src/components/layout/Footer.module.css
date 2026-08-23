@@ -59,3 +59,31 @@
 @media (min-width: 768px) {
   .inner { flex-direction: row; justify-content: space-between; align-items: center; }
 }
+
+.pickup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.pickup p { margin: 0; }
+
+.pickupLabel {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding-bottom: 2px;
+}
+
+.pickupAddress {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.pickupHours {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}

@@ -1,5 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import type { Order } from '@shared/domain/order';
+import type { OrderCreated } from '@shared/api/contracts';
+import { CLUB } from '@shared/domain/club';
+import { formatPrice } from '@shared/domain/money';
 import type { PromotionOutcome } from '@shared/domain/promotions';
 import { suggestEmailFix } from '@shared/domain/emailSuggestion';
 import { createOrderSchema } from '@shared/schemas/order.schema';
@@ -15,7 +17,7 @@ import styles from './CheckoutForm.module.css';
 interface Props {
   outcome: PromotionOutcome;
   onBack: () => void;
-  onComplete: (order: Order) => void;
+  onComplete: (created: OrderCreated) => void;
 }
 
 export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
@@ -66,10 +68,12 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
     try {
       // El pedido que devuelve la API es el autoritativo: código, precios,
       // promociones y total salen de la base, no de este browser.
-      const order = await orderService.create(parsed.data);
-      lastOrderStorage.save(order.code);
+      const created = await orderService.create(parsed.data);
+      // El token queda guardado con el código: es lo que después convierte el
+      // aviso de "tu último pedido" en un link al seguimiento.
+      lastOrderStorage.save(created.order.code, created.statusToken);
       clear();
-      onComplete(order);
+      onComplete(created);
     } catch (caught) {
       setFieldErrors(fieldErrorsFromApi(caught));
       setFormError(errorMessage(caught, 'No se pudo generar el pedido. Reintentá en unos segundos.'));
@@ -84,11 +88,28 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
         ← Volver al carrito
       </button>
 
+      {/* El detalle antes del formulario: es el último momento en que el socio
+          puede notar que eligió mal el talle, que es el dato que más se
+          equivoca. Antes acá sólo se veía un total y un conteo. */}
       <div className={styles.summary}>
+        <ul className={styles.lines}>
+          {lines.map((line) => (
+            <li key={`${line.productId}-${line.size}-${line.color ?? ''}`}>
+              <span className={styles.lineQty}>{line.quantity}×</span>
+              <span className={styles.lineName}>
+                {line.productName}
+                <em>
+                  Talle {line.size}
+                  {line.color && ` · ${line.color}`}
+                </em>
+              </span>
+              <span className={styles.linePrice}>
+                {formatPrice(line.unitPrice * line.quantity)}
+              </span>
+            </li>
+          ))}
+        </ul>
         <CartSummary outcome={outcome} compact />
-        <p className={styles.summaryItems}>
-          {lines.length} producto{lines.length === 1 ? '' : 's'} en el pedido
-        </p>
       </div>
 
       <Field
@@ -178,6 +199,20 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
         Te llega un mail con el código y los datos para pagar. Cuando se acredite el pago y cuando
         el pedido esté en la sede, te avisamos por el mismo medio.
       </p>
+
+      {/* Dónde hay que ir a buscarlo. Estaba en los mails y en ningún lado de
+          la web: el socio generaba el pedido sin saberlo. */}
+      {CLUB.pickupAddress && (
+        <div className={styles.pickup}>
+          <span className={styles.pickupLabel}>Se retira en</span>
+          <strong>{CLUB.pickupAddress}</strong>
+          {CLUB.pickupHours.map((franja) => (
+            <span key={franja} className={styles.pickupHours}>
+              {franja}
+            </span>
+          ))}
+        </div>
+      )}
     </form>
   );
 }

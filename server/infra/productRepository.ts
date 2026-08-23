@@ -6,7 +6,7 @@ import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'products';
 const COLUMNS =
-  'id,name,description,image_url,sizes_small,sizes_large,price_small,price_large,colors,size_chart_id,is_active,sort_order,created_at,updated_at';
+  'id,name,description,image_url,sizes_small,sizes_large,price_small,price_large,colors,size_chart_id,category,is_active,sort_order,created_at,updated_at';
 
 export interface ProductRepository {
   list(options?: { includeInactive?: boolean }): Promise<Product[]>;
@@ -28,6 +28,7 @@ const toRow = (patch: Partial<ProductInput>): Record<string, unknown> => {
   if (patch.priceLarge !== undefined) row.price_large = patch.priceLarge;
   if (patch.colors !== undefined) row.colors = patch.colors;
   if (patch.sizeChartId !== undefined) row.size_chart_id = patch.sizeChartId;
+  if (patch.category !== undefined) row.category = patch.category;
   if (patch.isActive !== undefined) row.is_active = patch.isActive;
   if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
   return row;

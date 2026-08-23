@@ -23,6 +23,7 @@ const product = (overrides: Partial<Product> = {}): Product => ({
   priceLarge: 54000,
   colors: [],
   sizeChartId: 'buzos',
+  category: 'abrigo',
   isActive: true,
   sortOrder: 0,
   createdAt: '2026-01-01T00:00:00Z',
@@ -57,7 +58,7 @@ function fakeOrders(): OrderRepository & { saved: Order[] } {
   const saved: Order[] = [];
   return {
     saved,
-    list: async () => saved,
+    list: async () => ({ orders: saved, total: saved.length }),
     findByCode: async (code) => saved.find((order) => order.code === code) ?? null,
     create: async (order) => {
       saved.push(order);
@@ -89,6 +90,7 @@ function fakeEmails(missed: EmailKind[] = []): EmailsService & { notified: Order
       return kind ? { kind, status: 'sent', recipient: order.email ?? '' } : null;
     },
     missedNotices: async () => missed,
+    history: async () => [],
   };
 }
 
@@ -97,7 +99,7 @@ describe('ordersService.create', () => {
     const orders = fakeOrders();
     const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
 
-    const order = await service.create({
+    const { order } = await service.create({
       ...CUSTOMER,
       // Un cliente malicioso podría inventar unitPrice/total: el tipo no los
       // acepta y el servicio jamás los leería.
@@ -135,7 +137,7 @@ describe('ordersService.create', () => {
       fakeEmails(),
     );
 
-    const order = await service.create({
+    const { order } = await service.create({
       ...CUSTOMER,
       items: [
         { productId: 'campera-canguro', size: 'L', quantity: 1 },
@@ -200,7 +202,7 @@ describe('ordersService.create', () => {
   it('descarta el color en productos que no tienen variantes', async () => {
     const service = createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions(), fakeEmails());
 
-    const order = await service.create({
+    const { order } = await service.create({
       ...CUSTOMER,
       items: [{ productId: 'campera-canguro', size: 'M', color: 'Inventado', quantity: 1 }],
     });
@@ -219,7 +221,7 @@ describe('ordersService.create', () => {
     };
 
     const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
-    const order = await service.create({
+    const { order } = await service.create({
       ...CUSTOMER,
       items: [{ productId: 'campera-canguro', size: 'S', quantity: 1 }],
     });
@@ -252,7 +254,7 @@ describe('ordersService.updateStatus', () => {
     const emails = fakeEmails();
     const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), emails);
 
-    const order = await service.create({
+    const { order } = await service.create({
       ...CUSTOMER,
       items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
     });
@@ -272,7 +274,8 @@ describe('ordersService.findPublic', () => {
     createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions(), fakeEmails());
 
   const newOrder = async (orders: ReturnType<typeof createOrdersService>) =>
-    orders.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }] });
+    (await orders.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }] }))
+      .order;
 
   it('devuelve el pedido cuando el token es el del link del mail', async () => {
     const orders = service();
@@ -346,8 +349,9 @@ describe('ordersService.updateStatus · que informa', () => {
     return { service, emails };
   };
 
-  const nuevo = (service: ReturnType<typeof createOrdersService>) =>
-    service.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }] });
+  const nuevo = async (service: ReturnType<typeof createOrdersService>) =>
+    (await service.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }] }))
+      .order;
 
   it('devuelve el pedido y el aviso que salio', async () => {
     const { service } = build();
@@ -378,5 +382,48 @@ describe('ordersService.updateStatus · que informa', () => {
     const update = await service.updateStatus(created.code, 'delivered');
 
     expect(update.missed).toEqual(['paymentConfirmed', 'readyForPickup']);
+  });
+});
+
+describe('ordersService.create · token de seguimiento', () => {
+  it('devuelve la firma del link junto con el pedido', async () => {
+    const service = createOrdersService(
+      fakeOrders(),
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+    );
+
+    const created = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
+    });
+
+    // Es el mismo token que viaja en el mail: sin esto el socio veia su codigo
+    // en pantalla y no tenia forma de entrar al seguimiento.
+    expect(created.statusToken).toBe(signOrderToken(created.order.code));
+    expect(created.statusToken.length).toBeGreaterThan(20);
+  });
+
+  it('el token que devuelve abre ese pedido y ningun otro', async () => {
+    const orders = fakeOrders();
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+    );
+
+    const created = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
+    });
+
+    const publico = await service.findPublic(created.order.code, created.statusToken);
+    expect(publico.code).toBe(created.order.code);
+
+    await expect(
+      service.findPublic('CAMG-2026-OTROO', created.statusToken),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 });

@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { countOrderUnits, customerFullName, type Order } from '@shared/domain/order';
+import { Link } from 'react-router-dom';
+import { PAGES, type OrderCreated } from '@shared/api/contracts';
+import { CLUB } from '@shared/domain/club';
+import { countOrderUnits, customerFullName } from '@shared/domain/order';
 import { formatDateTime } from '@/utils/formatDate';
 import { Button } from '@/ui';
 import { CartSummary } from '@/components/cart/CartSummary';
@@ -7,7 +10,14 @@ import styles from './OrderConfirmation.module.css';
 
 const COPIED_FEEDBACK_MS = 1800;
 
-export function OrderConfirmation({ order, onClose }: { order: Order; onClose: () => void }) {
+export function OrderConfirmation({
+  created,
+  onClose,
+}: {
+  created: OrderCreated;
+  onClose: () => void;
+}) {
+  const { order, statusToken } = created;
   const [copied, setCopied] = useState(false);
 
   async function copyCode() {
@@ -71,7 +81,19 @@ export function OrderConfirmation({ order, onClose }: { order: Order; onClose: (
         />
       </div>
 
-      <Button block onClick={onClose}>
+      {CLUB.pickupAddress && (
+        <p className={styles.pickup}>
+          Se retira en <strong>{CLUB.pickupAddress}</strong>
+          {CLUB.pickupHours.length > 0 && ` · ${CLUB.pickupHours.join(' · ')}`}
+        </p>
+      )}
+
+      {/* El link firmado, en pantalla y no sólo en el mail. */}
+      <Link to={PAGES.orderStatus(order.code, statusToken)} className={styles.track} onClick={onClose}>
+        Seguir mi pedido →
+      </Link>
+
+      <Button block variant="ghost" onClick={onClose}>
         Cerrar
       </Button>
     </div>

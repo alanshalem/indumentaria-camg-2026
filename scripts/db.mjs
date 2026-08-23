@@ -19,7 +19,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const FILES = {
   // En orden: cada migración asume que corrieron las anteriores.
-  migrate: ['db/migrations/0001_init.sql', 'db/migrations/0002_order_emails.sql'],
+  migrate: [
+    'db/migrations/0001_init.sql',
+    'db/migrations/0002_order_emails.sql',
+    'db/migrations/0003_product_category.sql',
+  ],
   seed: ['db/seed.sql'],
 };
 

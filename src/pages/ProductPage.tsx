@@ -4,6 +4,7 @@ import { formatPrice } from '@shared/domain/money';
 import {
   allSizes,
   imageForColor,
+  initialSize,
   priceBands,
   priceForTier,
   priceRange,
@@ -12,7 +13,8 @@ import {
   type Product,
 } from '@shared/domain/product';
 import { comboPartnerOf, promotionsForProduct } from '@shared/domain/promotions';
-import { SIZE_CHARTS } from '@shared/domain/sizeCharts';
+import { SIZE_CHARTS, SIZE_CHART_NOTE } from '@shared/domain/sizeCharts';
+import { SizeChartTable } from '@/components/products/SizeChartTable';
 import { productPath } from '@/app/paths';
 import { useCatalogProduct } from '@/hooks/useCatalogProduct';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -20,6 +22,7 @@ import { useCartStore } from '@/store/cartStore';
 import { useCatalogStore } from '@/store/catalogStore';
 import { useSizeChartStore } from '@/store/sizeChartStore';
 import { Alert, Button, ChipGroup, ColorSwatches, QuantityStepper, Spinner } from '@/ui';
+import { Picture } from '@/ui/Picture';
 import styles from './ProductPage.module.css';
 
 const FEEDBACK_MS = 1600;
@@ -70,7 +73,7 @@ function ProductDetail({ product }: { product: Product }) {
   const sizes = useMemo(() => allSizes(product), [product]);
   const bands = useMemo(() => priceBands(product), [product]);
 
-  const [size, setSize] = useState(() => sizes[0] ?? '');
+  const [size, setSize] = useState(() => initialSize(product));
   const [color, setColor] = useState<string | null>(() => product.colors[0]?.name ?? null);
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
@@ -82,7 +85,8 @@ function ProductDetail({ product }: { product: Product }) {
   const catalog = useCatalogStore((state) => state.products);
 
   const tier = sizeTierOf(product, size);
-  const unitPrice = tier ? priceForTier(product, tier) : product.priceLarge;
+  const unitPrice = tier ? priceForTier(product, tier) : null;
+  const range = useMemo(() => priceRange(product), [product]);
   const image = imageForColor(product, color);
   const chart = product.sizeChartId ? SIZE_CHARTS[product.sizeChartId] : null;
 
@@ -98,13 +102,15 @@ function ProductDetail({ product }: { product: Product }) {
   function handleAdd() {
     if (!tier) return;
     addLine({
+      // Después del guard el tier existe, así que el precio se resuelve acá y
+      // no depende del `unitPrice` que la vista deja en null sin talle elegido.
+      unitPrice: priceForTier(product, tier),
       productId: product.id,
       productName: product.name,
       size,
       sizeTier: tier,
       color,
       quantity,
-      unitPrice,
       image,
     });
     setJustAdded(true);
@@ -126,7 +132,12 @@ function ProductDetail({ product }: { product: Product }) {
         <div className={styles.layout}>
           <section className={styles.gallery} aria-label={`Fotos de ${product.name}`}>
             <div className={styles.mainImage}>
-              <img src={image} alt={product.name} />
+              <Picture
+                src={image}
+                alt={product.name}
+                sizes="(max-width: 900px) 92vw, 46vw"
+                eager
+              />
             </div>
 
             {product.colors.length > 1 && (
@@ -140,7 +151,7 @@ function ProductDetail({ product }: { product: Product }) {
                     aria-label={`Ver ${product.name} en ${variant.name}`}
                     aria-pressed={variant.name === color}
                   >
-                    <img src={variant.imageUrl ?? product.imageUrl} alt="" />
+                    <Picture src={variant.imageUrl ?? product.imageUrl} alt="" sizes="64px" />
                   </button>
                 ))}
               </div>
@@ -152,8 +163,13 @@ function ProductDetail({ product }: { product: Product }) {
             {product.description && <p className={styles.description}>{product.description}</p>}
 
             <div className={styles.priceBlock}>
-              <p className={styles.price}>{formatPrice(unitPrice)}</p>
-              {size && <p className={styles.priceNote}>Precio del talle {size}</p>}
+              <p className={styles.price}>
+                {unitPrice === null && range.hasRange && <span className={styles.from}>Desde</span>}
+                {formatPrice(unitPrice ?? range.min)}
+              </p>
+              <p className={styles.priceNote}>
+                {tier ? `Precio del talle ${size}` : 'Elegí tu talle para ver el precio final'}
+              </p>
             </div>
 
             {product.colors.length > 0 && (
@@ -175,7 +191,7 @@ function ProductDetail({ product }: { product: Product }) {
                   <button
                     type="button"
                     className={styles.chartLink}
-                    onClick={() => openSizeChart(product.sizeChartId!)}
+                    onClick={() => openSizeChart(product.sizeChartId!, size)}
                   >
                     Ver tabla de talles
                   </button>
@@ -210,7 +226,7 @@ function ProductDetail({ product }: { product: Product }) {
             <div className={styles.buyRow}>
               <QuantityStepper value={quantity} onChange={setQuantity} />
               <Button onClick={handleAdd} disabled={!tier} className={styles.buyButton}>
-                {justAdded ? '✓ Agregado al carrito' : 'Agregar al carrito'}
+                {justAdded ? '✓ Agregado al carrito' : tier ? 'Agregar al carrito' : 'Elegí un talle'}
               </Button>
             </div>
 
@@ -251,17 +267,17 @@ function ProductDetail({ product }: { product: Product }) {
         {chart && product.sizeChartId && (
           <section className={styles.chartSection} aria-label="Tabla de talles">
             <h2 className={styles.sectionTitle}>Tabla de talles · {chart.label}</h2>
+            {/* Con el talle elegido resaltado: es la única fila que le importa. */}
+            <SizeChartTable chart={chart} highlight={size} />
             <button
               type="button"
               className={styles.chartImage}
-              onClick={() => openSizeChart(product.sizeChartId!)}
-              aria-label="Ampliar la tabla de talles"
+              onClick={() => openSizeChart(product.sizeChartId!, size)}
+              aria-label="Ver dónde se toma cada medida"
             >
-              <img src={chart.imageUrl} alt={chart.alt} loading="lazy" />
+              <Picture src={chart.imageUrl} alt={chart.alt} sizes="(max-width: 900px) 92vw, 700px" />
             </button>
-            <p className={styles.chartNote}>
-              Medidas aproximadas en centímetros. Pueden variar 1 cm según la tela y el estampado.
-            </p>
+            <p className={styles.chartNote}>{SIZE_CHART_NOTE}</p>
           </section>
         )}
 
@@ -271,7 +287,7 @@ function ProductDetail({ product }: { product: Product }) {
             <div className={styles.relatedGrid}>
               {related.map((item) => (
                 <Link key={item.id} to={productPath(item.id)} className={styles.relatedCard}>
-                  <img src={item.imageUrl} alt="" loading="lazy" />
+                  <Picture src={item.imageUrl} alt="" sizes="(max-width: 700px) 46vw, 220px" />
                   <span className={styles.relatedName}>{item.name}</span>
                   <span className={styles.relatedPrice}>
                     {/* `priceRange` sólo mira los tramos que tienen talles cargados. */}

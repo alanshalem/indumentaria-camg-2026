@@ -8,7 +8,7 @@
 -- =============================================================================
 
 insert into public.products
-  (id, name, description, image_url, sizes_small, sizes_large, price_small, price_large, colors, size_chart_id, is_active, sort_order)
+  (id, name, description, image_url, sizes_small, sizes_large, price_small, price_large, colors, size_chart_id, category, is_active, sort_order)
 values
   ('campera-canguro',
    'Campera Canguro CAMG',
@@ -16,7 +16,7 @@ values
    '/images/fotos-prendas/campera.jpg',
    array['6','8','10','12','14'],
    array['16/XS','S','M','L','XL','XXL','3XL'],
-   48500, 54000, '[]'::jsonb, 'buzos', true, 10),
+   48500, 54000, '[]'::jsonb, 'buzos', 'abrigo', true, 10),
 
   ('buzo-canguro',
    'Buzo Canguro CAMG',
@@ -24,7 +24,7 @@ values
    '/images/fotos-prendas/buzo-canguro.jpg',
    array['6','8','10','12','14'],
    array['16/XS','S','M','L','XL','XXL','3XL'],
-   46000, 51500, '[]'::jsonb, 'buzos', true, 20),
+   46000, 51500, '[]'::jsonb, 'buzos', 'abrigo', true, 20),
 
   ('buzo-medio-cierre',
    'Buzo Medio Cierre CAMG',
@@ -32,7 +32,7 @@ values
    '/images/fotos-prendas/buzo-medio-cierre.jpg',
    array['6','8','10','12','14'],
    array['16/XS','S','M','L','XL','XXL','3XL'],
-   41000, 45500, '[]'::jsonb, 'buzos', true, 30),
+   41000, 45500, '[]'::jsonb, 'buzos', 'abrigo', true, 30),
 
   ('pantalon-con-cierre',
    'Pantalón con cierre CAMG',
@@ -40,7 +40,7 @@ values
    '/images/fotos-prendas/pantalon.jpg',
    array['6','8','10','12','14'],
    array['XS','S','M','L','XL','2XL','3XL'],
-   44000, 48500, '[]'::jsonb, 'pantalones', true, 40),
+   44000, 48500, '[]'::jsonb, 'pantalones', 'pantalones', true, 40),
 
   ('remera-algodon',
    'Remera de algodón CAMG',
@@ -52,7 +52,7 @@ values
    '[{"name":"Blanca","hex":"#F5F5F5","imageUrl":"/images/fotos-prendas/remera-blanca-algodon.jpg"},
      {"name":"Negra","hex":"#1A1A1A","imageUrl":"/images/fotos-prendas/remera-negra-algodon.jpg"},
      {"name":"Roja","hex":"#DC143C","imageUrl":"/images/fotos-prendas/remera-roja-algodon.jpg"}]'::jsonb,
-   'remeras', true, 50),
+   'remeras', 'remeras', true, 50),
 
   ('medias-camg',
    'Medias CAMG',
@@ -63,7 +63,7 @@ values
    6000, 6500,
    '[{"name":"Negras","hex":"#1A1A1A","imageUrl":null},
      {"name":"Blancas","hex":"#F5F5F5","imageUrl":null}]'::jsonb,
-   null, true, 60),
+   null, 'accesorios', true, 60),
 
   ('cuello-camg',
    'Cuello CAMG',
@@ -71,7 +71,7 @@ values
    '/images/fotos-prendas/cuello.png',
    array[]::text[],
    array['Único'],
-   2000, 2000, '[]'::jsonb, null, true, 70),
+   2000, 2000, '[]'::jsonb, null, 'accesorios', true, 70),
 
   ('toalla-camg',
    'Toalla de mano CAMG',
@@ -79,7 +79,7 @@ values
    '/images/fotos-prendas/toalla.png',
    array[]::text[],
    array['Único'],
-   1000, 1000, '[]'::jsonb, null, true, 80)
+   1000, 1000, '[]'::jsonb, null, 'accesorios', true, 80)
 
 on conflict (id) do update set
   name          = excluded.name,
@@ -91,6 +91,7 @@ on conflict (id) do update set
   price_large   = excluded.price_large,
   colors        = excluded.colors,
   size_chart_id = excluded.size_chart_id,
+  category      = excluded.category,
   sort_order    = excluded.sort_order;
 
 -- -----------------------------------------------------------------------------

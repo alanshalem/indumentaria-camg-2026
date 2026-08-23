@@ -121,3 +121,20 @@
   font-size: 0.76rem;
   color: #7ee2a8;
 }
+
+/* --- Paginado de pedidos ------------------------------------------------------ */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 20px 0 4px;
+}
+
+.pagerLabel {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}

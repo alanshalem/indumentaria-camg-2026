@@ -8,6 +8,7 @@ import {
 } from '../../../shared/domain/orderEmails.js';
 import {
   emailLogRepository,
+  type EmailLogRecord,
   type EmailLogRepository,
 } from '../../infra/emailLogRepository.js';
 import { resendTransport, type EmailTransport } from '../../infra/emailTransport.js';
@@ -21,6 +22,8 @@ export interface EmailsService {
   notifyStatus(order: Order): Promise<EmailNotice | null>;
   /** Avisos de etapas ya superadas que este pedido nunca recibió. */
   missedNotices(order: Order): Promise<EmailKind[]>;
+  /** Historial completo, para que el panel pueda mostrar qué se le mandó. */
+  history(orderCode: string): Promise<EmailLogRecord[]>;
 }
 
 export function createEmailsService(
@@ -33,6 +36,8 @@ export function createEmailsService(
       if (!kind) return null;
       return send(order, kind, transport, log);
     },
+
+    history: (orderCode) => log.history(orderCode),
 
     async missedNotices(order) {
       try {

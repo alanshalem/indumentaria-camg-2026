@@ -305,6 +305,14 @@ function fakeLog(yaEnviados: EmailKind[] = []) {
   const records: EmailLogEntry[] = [];
   const repository: EmailLogRepository = {
     sentKinds: async () => yaEnviados,
+    history: async () =>
+      records.map((entry) => ({
+        kind: entry.kind,
+        status: entry.status,
+        recipient: entry.recipient,
+        error: entry.error ?? null,
+        at: 0,
+      })),
     record: async (entry) => {
       records.push(entry);
       if (entry.status === 'sent') yaEnviados.push(entry.kind);
@@ -372,6 +380,7 @@ describe('emailsService', () => {
       sentKinds: async () => {
         throw new Error('base caída');
       },
+      history: async () => [],
       record: async () => {},
     };
 

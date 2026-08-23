@@ -1,4 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  PRODUCT_CATEGORIES,
+  PRODUCT_CATEGORY_LABELS,
+  type ProductCategory,
+} from '@shared/domain/product';
 import { useCatalogStore } from '@/store/catalogStore';
 import { Alert, Button, EmptyState } from '@/ui';
 import { ProductCard } from './ProductCard';
@@ -21,6 +26,20 @@ export function ProductGrid() {
 
   const isFirstLoad = status === 'loading' && products.length === 0;
 
+  const [category, setCategory] = useState<ProductCategory | 'all'>('all');
+
+  // Sólo se ofrecen las categorías que tienen algo cargado: un filtro que
+  // devuelve cero resultados no es un filtro, es una trampa.
+  const available = useMemo(
+    () => PRODUCT_CATEGORIES.filter((id) => products.some((item) => item.category === id)),
+    [products],
+  );
+
+  const visible = useMemo(
+    () => (category === 'all' ? products : products.filter((item) => item.category === category)),
+    [products, category],
+  );
+
   return (
     <section className={styles.section} id="catalogo">
       <div className="container">
@@ -29,6 +48,35 @@ export function ProductGrid() {
           <h2 className={styles.title}>Indumentaria oficial CAMG</h2>
           <p className={styles.sub}>Elegí tu talle y color. Generá tu pedido en un minuto.</p>
         </header>
+
+        {/* Con ocho productos la grilla ya son casi ocho pantallas de scroll
+            en un teléfono, y el club va a sumar más. */}
+        {available.length > 1 && (
+          <div className={styles.filters} role="group" aria-label="Filtrar por categoría">
+            <button
+              type="button"
+              className={`${styles.filter} ${category === 'all' ? styles.filterOn : ''}`}
+              onClick={() => setCategory('all')}
+              aria-pressed={category === 'all'}
+            >
+              Todo <span className={styles.filterCount}>{products.length}</span>
+            </button>
+            {available.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={`${styles.filter} ${category === id ? styles.filterOn : ''}`}
+                onClick={() => setCategory(id)}
+                aria-pressed={category === id}
+              >
+                {PRODUCT_CATEGORY_LABELS[id]}
+                <span className={styles.filterCount}>
+                  {products.filter((item) => item.category === id).length}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {status === 'error' && (
           <div className={styles.center}>
@@ -62,9 +110,9 @@ export function ProductGrid() {
           </div>
         )}
 
-        {products.length > 0 && (
+        {visible.length > 0 && (
           <div className={styles.grid}>
-            {products.map((product) => (
+            {visible.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

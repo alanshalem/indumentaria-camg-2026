@@ -133,3 +133,20 @@
   margin-bottom: 12px;
 }
 .totalVal { color: var(--color-red-bright); }
+
+/* Salida sin tener que buscar la ✕ de arriba de todo. */
+.keepShopping {
+  display: block;
+  width: 100%;
+  padding: 10px 0 2px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  transition: color var(--transition);
+}
+
+.keepShopping:hover {
+  color: var(--color-white);
+}

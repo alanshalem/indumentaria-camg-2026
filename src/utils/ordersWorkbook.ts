@@ -8,6 +8,7 @@ import {
   type OrderStatus,
 } from '@shared/domain/order.js';
 import { formatPhone } from '@shared/domain/phone.js';
+import { CLUB } from '@shared/domain/club.js';
 import { compareSizes, SIZE_TIER_LABELS } from '@shared/domain/product.js';
 
 /**
@@ -16,6 +17,10 @@ import { compareSizes, SIZE_TIER_LABELS } from '@shared/domain/product.js';
  * Es todo función pura y sin dependencias de red o DOM: la parte que puede
  * estar mal —la agregación por producto— se testea sin abrir un archivo.
  * La descarga vive aparte, en `services/exportOrders.ts`.
+ *
+ * El club imprime esto y se lo lleva al proveedor, así que las hojas salen
+ * apaisadas, sin cuadrícula y con el filtro aplicado escrito arriba: dos
+ * exportaciones distintas tienen que poder distinguirse en papel.
  */
 
 // Paleta pensada para el papel, no para la app: el Excel se ve sobre blanco.
@@ -26,6 +31,8 @@ const MUTED = '#6B7280';
 const LINE = '#E5E7EB';
 const ZEBRA = '#FAFAFA';
 const TOTALS_BG = '#F3F4F6';
+const WARN_BG = '#FEF3C7';
+const WARN_INK = '#92400E';
 
 const MONEY = '"$"#,##0';
 const DATE_TIME = 'dd/mm/yyyy hh:mm';
@@ -37,15 +44,41 @@ const STATUS_STYLE: Record<OrderStatus, { textColor: string; backgroundColor: st
   delivered: { textColor: '#166534', backgroundColor: '#DCFCE7' },
 };
 
-/** El paquete no exporta el tipo de columna, así que se declara acá. */
+/**
+ * Un pedido cuenta como confirmado en cuanto se acredita el pago.
+ * Es la línea que separa lo que el club puede encargarle al proveedor de lo
+ * que todavía es una intención.
+ */
+export const isConfirmed = (status: OrderStatus): boolean => status !== 'pending';
+
+/** Tipos que el paquete no exporta desde su raíz, declarados acá. */
 interface ColumnWidth {
   width: number;
+}
+
+interface ConditionalFormatting {
+  cellRange: { from: { row: number; column: number }; to: { row: number; column: number } };
+  condition: { operator: '>' | '>=' | '<' | '<=' | '=' | '!='; value: number };
+  style: { backgroundColor?: string; textColor?: string; fontWeight?: 'bold' };
 }
 
 export interface WorkbookSheet {
   sheet: string;
   data: SheetData;
   columns: ColumnWidth[];
+  /** Apaisado en las hojas anchas: diez columnas no entran en A4 vertical. */
+  landscape: boolean;
+  /** Filas de encabezado que quedan fijas al scrollear. */
+  stickyRowsCount: number;
+  stickyColumnsCount?: number;
+  conditionalFormatting?: ConditionalFormatting[];
+}
+
+/** Qué recorte de pedidos se exportó. Va impreso arriba de cada hoja. */
+export interface ExportContext {
+  /** Descripción del filtro tal como lo ve el admin. */
+  filterLabel: string;
+  generatedAt: Date;
 }
 
 /** Una fila del resumen: cuántas unidades de cada producto/talle/color se pidieron. */
@@ -54,13 +87,58 @@ export interface ProductSummaryRow {
   productName: string;
   size: string;
   color: string | null;
-  units: number;
-  amount: number;
+  /** Unidades de pedidos con el pago acreditado. Es lo que hay que encargar. */
+  confirmedUnits: number;
+  /** Unidades de pedidos que todavía nadie pagó. */
+  unconfirmedUnits: number;
+  /** Importe de las unidades confirmadas. */
+  confirmedAmount: number;
 }
 
 // ---------------------------------------------------------------------------
 //  Celdas
 // ---------------------------------------------------------------------------
+
+/**
+ * Título de la hoja, fusionado a lo ancho. Sin esto, una planilla de seis
+ * pedidos puede ser «todo» o «sólo los pendientes de agosto» y por dentro son
+ * idénticas.
+ */
+const titleRows = (sheetName: string, span: number, context: ExportContext): SheetData => [
+  [
+    {
+      value: `${CLUB.name} · ${sheetName}`,
+      type: String,
+      fontWeight: 'bold',
+      fontSize: 14,
+      textColor: INK,
+      columnSpan: span,
+      height: 24,
+      alignVertical: 'center',
+    },
+  ],
+  [
+    {
+      value: `${context.filterLabel} · generado el ${formatStamp(context.generatedAt)}`,
+      type: String,
+      fontSize: 10,
+      textColor: MUTED,
+      columnSpan: span,
+      height: 16,
+      alignVertical: 'center',
+    },
+  ],
+];
+
+const stampFormatter = new Intl.DateTimeFormat('es-AR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+const formatStamp = (date: Date) => stampFormatter.format(date);
 
 const headerCell = (value: string, align?: 'left' | 'right' | 'center'): Row[number] => ({
   value,
@@ -99,11 +177,12 @@ const money = (value: number, index: number, extra: Record<string, unknown> = {}
   ...extra,
 });
 
-const count = (value: number, index: number): Row[number] => ({
+const count = (value: number, index: number, extra: Record<string, unknown> = {}): Row[number] => ({
   ...base(index),
   value,
   type: Number,
   align: 'right',
+  ...extra,
 });
 
 const totalsCell = (value: string | number, isMoney: boolean): Row[number] => ({
@@ -124,25 +203,29 @@ const totalsRow = (cells: readonly (string | number | null)[], moneyAt: readonly
     value === null ? totalsCell('', false) : totalsCell(value, moneyAt.includes(index)),
   );
 
+/** Fila 1 y 2 son el título; la 3 es el encabezado de columnas. */
+const TITLE_ROWS = 2;
+const HEADER_ROWS = TITLE_ROWS + 1;
+
 // ---------------------------------------------------------------------------
 //  Hoja 1 · Pedidos
 // ---------------------------------------------------------------------------
 
-function ordersSheet(orders: readonly Order[]): WorkbookSheet {
-  const data: SheetData = [
-    headerRow([
-      ['Código', 'left'],
-      ['Fecha', 'left'],
-      ['Socio', 'left'],
-      ['Teléfono', 'left'],
-      ['Email', 'left'],
-      ['Unidades', 'right'],
-      ['Subtotal', 'right'],
-      ['Descuento', 'right'],
-      ['Total', 'right'],
-      ['Estado', 'center'],
-    ]),
-  ];
+function ordersSheet(orders: readonly Order[], context: ExportContext): WorkbookSheet {
+  const columns = [
+    ['Código', 'left'],
+    ['Fecha', 'left'],
+    ['Socio', 'left'],
+    ['Teléfono', 'left'],
+    ['Email', 'left'],
+    ['Unidades', 'right'],
+    ['Subtotal', 'right'],
+    ['Descuento', 'right'],
+    ['Total', 'right'],
+    ['Estado', 'center'],
+  ] as const;
+
+  const data: SheetData = [...titleRows('Pedidos', columns.length, context), headerRow(columns)];
 
   orders.forEach((order, index) => {
     const discount = order.subtotal - order.total;
@@ -181,6 +264,9 @@ function ordersSheet(orders: readonly Order[]): WorkbookSheet {
   return {
     sheet: 'Pedidos',
     data,
+    landscape: true,
+    stickyRowsCount: HEADER_ROWS,
+    stickyColumnsCount: 1,
     columns: [
       { width: 18 },
       { width: 18 },
@@ -200,22 +286,22 @@ function ordersSheet(orders: readonly Order[]): WorkbookSheet {
 //  Hoja 2 · Items
 // ---------------------------------------------------------------------------
 
-function itemsSheet(orders: readonly Order[]): WorkbookSheet {
-  const data: SheetData = [
-    headerRow([
-      ['Código', 'left'],
-      ['Fecha', 'left'],
-      ['Socio', 'left'],
-      ['Teléfono', 'left'],
-      ['Producto', 'left'],
-      ['Talle', 'left'],
-      ['Tramo', 'left'],
-      ['Color', 'left'],
-      ['Cantidad', 'right'],
-      ['Precio unit.', 'right'],
-      ['Importe', 'right'],
-    ]),
-  ];
+function itemsSheet(orders: readonly Order[], context: ExportContext): WorkbookSheet {
+  const columns = [
+    ['Código', 'left'],
+    ['Fecha', 'left'],
+    ['Socio', 'left'],
+    ['Teléfono', 'left'],
+    ['Producto', 'left'],
+    ['Talle', 'left'],
+    ['Tramo', 'left'],
+    ['Color', 'left'],
+    ['Cantidad', 'right'],
+    ['Precio unit.', 'right'],
+    ['Importe', 'right'],
+  ] as const;
+
+  const data: SheetData = [...titleRows('Items', columns.length, context), headerRow(columns)];
 
   let index = 0;
   for (const order of orders) {
@@ -251,6 +337,11 @@ function itemsSheet(orders: readonly Order[]): WorkbookSheet {
   return {
     sheet: 'Items',
     data,
+    landscape: true,
+    stickyRowsCount: HEADER_ROWS,
+    // El código queda a la vista al scrollear a la derecha: sin esto no se sabe
+    // de qué pedido es la línea que se está mirando.
+    stickyColumnsCount: 1,
     columns: [
       { width: 18 },
       { width: 18 },
@@ -275,29 +366,38 @@ const summaryKey = (item: OrderItem) => `${item.productId}|${item.size}|${item.c
 
 /**
  * Cuántas unidades hay que pedirle al proveedor de cada producto, talle y color.
- * Es la cuenta que el club haría a mano mirando pedido por pedido.
+ *
+ * Separa lo pago de lo que todavía nadie confirmó: sumar todo junto hacía que
+ * el club encargara y pagara prendas de pedidos que nunca se concretaron.
  */
 export function summarizeByProduct(orders: readonly Order[]): ProductSummaryRow[] {
   const rows = new Map<string, ProductSummaryRow>();
 
   for (const order of orders) {
+    const confirmed = isConfirmed(order.status);
+
     for (const item of order.items) {
       const key = summaryKey(item);
-      const existing = rows.get(key);
-
-      if (existing) {
-        existing.units += item.quantity;
-        existing.amount += item.unitPrice * item.quantity;
-      } else {
-        rows.set(key, {
+      const row =
+        rows.get(key) ??
+        {
           productId: item.productId,
           productName: item.productName,
           size: item.size,
           color: item.color,
-          units: item.quantity,
-          amount: item.unitPrice * item.quantity,
-        });
+          confirmedUnits: 0,
+          unconfirmedUnits: 0,
+          confirmedAmount: 0,
+        };
+
+      if (confirmed) {
+        row.confirmedUnits += item.quantity;
+        row.confirmedAmount += item.unitPrice * item.quantity;
+      } else {
+        row.unconfirmedUnits += item.quantity;
       }
+
+      rows.set(key, row);
     }
   }
 
@@ -309,17 +409,21 @@ export function summarizeByProduct(orders: readonly Order[]): ProductSummaryRow[
   );
 }
 
-function summarySheet(orders: readonly Order[]): WorkbookSheet {
+function summarySheet(orders: readonly Order[], context: ExportContext): WorkbookSheet {
   const summary = summarizeByProduct(orders);
 
+  const columns = [
+    ['Producto', 'left'],
+    ['Talle', 'left'],
+    ['Color', 'left'],
+    ['A encargar', 'right'],
+    ['Sin confirmar', 'right'],
+    ['Importe confirmado', 'right'],
+  ] as const;
+
   const data: SheetData = [
-    headerRow([
-      ['Producto', 'left'],
-      ['Talle', 'left'],
-      ['Color', 'left'],
-      ['Unidades', 'right'],
-      ['Importe', 'right'],
-    ]),
+    ...titleRows('Resumen por producto', columns.length, context),
+    headerRow(columns),
   ];
 
   summary.forEach((row, index) => {
@@ -327,27 +431,53 @@ function summarySheet(orders: readonly Order[]): WorkbookSheet {
       text(row.productName, index, { fontWeight: 'bold' }),
       text(row.size, index),
       text(row.color ?? '', index),
-      count(row.units, index),
-      money(row.amount, index),
+      count(row.confirmedUnits, index, { fontWeight: 'bold' }),
+      count(row.unconfirmedUnits, index),
+      money(row.confirmedAmount, index),
     ]);
   });
 
   if (summary.length > 0) {
-    const units = summary.reduce((sum, row) => sum + row.units, 0);
-    const amount = summary.reduce((sum, row) => sum + row.amount, 0);
-    data.push(totalsRow(['Total a pedir', null, null, units, amount], [4]));
+    const confirmedUnits = summary.reduce((sum, row) => sum + row.confirmedUnits, 0);
+    const unconfirmed = summary.reduce((sum, row) => sum + row.unconfirmedUnits, 0);
+    const amount = summary.reduce((sum, row) => sum + row.confirmedAmount, 0);
+    data.push(totalsRow(['Total a encargar', null, null, confirmedUnits, unconfirmed, amount], [5]));
   }
 
   return {
     sheet: 'Resumen por producto',
     data,
-    columns: [{ width: 32 }, { width: 12 }, { width: 16 }, { width: 12 }, { width: 14 }],
+    landscape: false,
+    stickyRowsCount: HEADER_ROWS,
+    // Pinta la columna «Sin confirmar» sólo donde hay algo pendiente: son las
+    // filas donde el número «A encargar» de al lado se queda corto a propósito.
+    conditionalFormatting:
+      summary.length > 0
+        ? [
+            {
+              cellRange: {
+                from: { row: HEADER_ROWS + 1, column: 5 },
+                to: { row: HEADER_ROWS + summary.length, column: 5 },
+              },
+              condition: { operator: '>', value: 0 },
+              style: { backgroundColor: WARN_BG, textColor: WARN_INK, fontWeight: 'bold' },
+            },
+          ]
+        : [],
+    columns: [{ width: 32 }, { width: 12 }, { width: 16 }, { width: 13 }, { width: 15 }, { width: 20 }],
   };
 }
 
 // ---------------------------------------------------------------------------
 
 /** Las tres hojas del libro, en el orden en que conviene leerlas. */
-export function buildOrdersWorkbook(orders: readonly Order[]): WorkbookSheet[] {
-  return [ordersSheet(orders), itemsSheet(orders), summarySheet(orders)];
+export function buildOrdersWorkbook(
+  orders: readonly Order[],
+  context: ExportContext,
+): WorkbookSheet[] {
+  return [
+    ordersSheet(orders, context),
+    itemsSheet(orders, context),
+    summarySheet(orders, context),
+  ];
 }

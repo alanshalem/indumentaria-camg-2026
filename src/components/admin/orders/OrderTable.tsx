@@ -10,6 +10,7 @@ import {
 } from '@shared/domain/order';
 import { EMAIL_KIND_LABELS, emailKindForStatus } from '@shared/domain/orderEmails';
 import { describeUpdate } from './statusNotice';
+import { OrderEmailHistory } from './OrderEmailHistory';
 import { formatPhone, whatsappLink } from '@shared/domain/phone';
 import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
@@ -193,6 +194,10 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                             </div>
                           )}
                         </dl>
+
+                        {/* Se pide recién al desplegar: no tiene sentido traer
+                            el historial de cien pedidos que nadie va a abrir. */}
+                        <OrderEmailHistory code={order.code} />
                       </td>
                     </tr>
                   )}

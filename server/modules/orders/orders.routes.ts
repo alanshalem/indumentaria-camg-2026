@@ -9,6 +9,7 @@ import { Router } from '../../http/router.js';
 import { created, ok } from '../../http/responses.js';
 import { parseOrThrow } from '../../http/validate.js';
 import { adminOnly } from '../../security/adminGuard.js';
+import { emailsService } from '../emails/emails.service.js';
 import { ordersService } from './orders.service.js';
 
 export const orderRoutes = new Router()
@@ -17,6 +18,15 @@ export const orderRoutes = new Router()
     adminOnly(async (request) => {
       const filters = parseOrThrow(orderQuerySchema, request.query, 'Filtros inválidos');
       return ok(await ordersService.list(filters));
+    }),
+  )
+  // Historial de avisos. Va antes de `/orders/:code` sólo por claridad: son
+  // rutas de distinto largo y el router no las confunde.
+  .get(
+    ROUTES.orders.emailsPattern,
+    adminOnly(async (request) => {
+      const code = parseOrThrow(orderCodeSchema, request.params.code, 'Código inválido');
+      return ok(await emailsService.history(code));
     }),
   )
   // Público con firma: el seguimiento del pedido que se linkea desde el mail.

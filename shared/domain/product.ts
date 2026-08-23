@@ -6,6 +6,25 @@ import type { SizeChartId } from './sizeCharts.js';
  * Chicos"— para casi todos los productos. El precio depende del talle elegido,
  * así que el talle define un *tier* y el tier define el precio.
  */
+/**
+ * Categorías del catálogo.
+ *
+ * Sirven para filtrar: con ocho productos la grilla todavía se recorre, pero en
+ * un teléfono ya son casi ocho pantallas de scroll y el club va a sumar más.
+ */
+export const PRODUCT_CATEGORIES = ['abrigo', 'pantalones', 'remeras', 'accesorios'] as const;
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+
+export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
+  abrigo: 'Buzos y camperas',
+  pantalones: 'Pantalones',
+  remeras: 'Remeras',
+  accesorios: 'Accesorios',
+};
+
+export const isProductCategory = (value: unknown): value is ProductCategory =>
+  typeof value === 'string' && (PRODUCT_CATEGORIES as readonly string[]).includes(value);
+
 export const SIZE_TIERS = ['small', 'large'] as const;
 export type SizeTier = (typeof SIZE_TIERS)[number];
 
@@ -37,6 +56,8 @@ export interface Product {
   /** Vacío = el producto no ofrece elección de color. */
   colors: ProductColor[];
   sizeChartId: SizeChartId | null;
+  /** Para el filtro del catálogo. */
+  category: ProductCategory;
   isActive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -55,6 +76,7 @@ export interface ProductInput {
   priceLarge: Ars;
   colors?: ProductColor[];
   sizeChartId?: SizeChartId | null;
+  category?: ProductCategory;
   isActive?: boolean;
   sortOrder?: number;
 }
@@ -100,6 +122,19 @@ export const priceForTier = (
   product: Pick<Product, 'priceSmall' | 'priceLarge'>,
   tier: SizeTier,
 ): Ars => (tier === 'small' ? product.priceSmall : product.priceLarge);
+
+/**
+ * Talle marcado al abrir la ficha o la card.
+ *
+ * Vacío a propósito cuando hay más de uno. Preseleccionar el primero hacía que
+ * un adulto agregara al carrito un talle 6 —el primero de la lista es de nene—
+ * sin haber elegido nada, y el club terminaba encargándole esa prenda al
+ * proveedor. Con una sola opción no hay decisión que tomar: se marca sola.
+ */
+export const initialSize = (product: Pick<Product, 'sizesSmall' | 'sizesLarge'>): string => {
+  const sizes = allSizes(product);
+  return sizes.length === 1 ? sizes[0]! : '';
+};
 
 /** Rango a mostrar en la ficha cuando los dos tiers valen distinto. */
 export const priceRange = (

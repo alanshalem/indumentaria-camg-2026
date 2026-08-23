@@ -42,3 +42,22 @@
   justify-content: center;
 }
 .dismiss:hover { background: rgba(0,0,0,0.25); }
+
+.codeLink {
+  text-decoration: none;
+}
+
+.codeLink:hover {
+  text-decoration: underline;
+}
+
+.cta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.cta:hover {
+  text-decoration: underline;
+}

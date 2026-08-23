@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_PRICE_ARS } from '../domain/money.js';
+import { PRODUCT_CATEGORIES } from '../domain/product.js';
 import { SIZE_CHART_IDS } from '../domain/sizeCharts.js';
 
 const trimmed = (max: number) => z.string().trim().max(max);
@@ -41,6 +42,7 @@ export const productInputSchema = z
     priceLarge: priceSchema,
     colors: z.array(productColorSchema).max(12).default([]),
     sizeChartId: z.enum(SIZE_CHART_IDS).nullable().default(null),
+    category: z.enum(PRODUCT_CATEGORIES).default('accesorios'),
     isActive: z.boolean().default(true),
     sortOrder: z.number().int().min(0).max(9999).default(0),
   })
@@ -71,6 +73,7 @@ export const productPatchSchema = z
     priceLarge: priceSchema.optional(),
     colors: z.array(productColorSchema).max(12).optional(),
     sizeChartId: z.enum(SIZE_CHART_IDS).nullable().optional(),
+    category: z.enum(PRODUCT_CATEGORIES).optional(),
     isActive: z.boolean().optional(),
     sortOrder: z.number().int().min(0).max(9999).optional(),
   })

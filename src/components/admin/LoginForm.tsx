@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { errorMessage } from '@/services/apiError';
 import { Alert, Button, Field } from '@/ui';
+import { Picture } from '@/ui/Picture';
 import styles from './LoginForm.module.css';
 
 interface Captcha {
@@ -62,7 +63,7 @@ export function LoginForm() {
   return (
     <div className={styles.page}>
       <form className={styles.card} onSubmit={handleSubmit} noValidate>
-        <img src="/images/logo-club.png" alt="" className={styles.logo} />
+        <Picture src="/images/logo-club.png" alt="" sizes="72px" className={styles.logo} />
         <h1 className={styles.title}>Panel administrativo</h1>
         <p className={styles.sub}>Acceso restringido al staff del club.</p>
 

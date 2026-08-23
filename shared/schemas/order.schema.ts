@@ -66,13 +66,22 @@ export const orderCodeSchema = z
   .toUpperCase()
   .regex(ORDER_CODE_PATTERN, 'Código de pedido inválido');
 
+/** Cuántos pedidos trae una página del panel. */
+export const ORDERS_PAGE_SIZE = 50;
+
 export const orderQuerySchema = z.object({
   status: orderStatusSchema.optional(),
   search: z.string().trim().max(80).optional(),
   from: z.string().trim().optional(),
   to: z.string().trim().optional(),
+  // La query llega como texto: `coerce` la pasa a número antes de validar.
+  limit: z.coerce.number().int().min(1).max(200).default(ORDERS_PAGE_SIZE),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 export type CreateOrderDto = z.infer<typeof createOrderSchema>;
 export type UpdateOrderDto = z.infer<typeof updateOrderSchema>;
 export type OrderQueryDto = z.infer<typeof orderQuerySchema>;
+
+/** Lo que manda el cliente: `limit` y `offset` los completa el esquema. */
+export type OrderFilters = z.input<typeof orderQuerySchema>;

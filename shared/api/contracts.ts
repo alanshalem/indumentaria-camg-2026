@@ -26,6 +26,8 @@ export const ROUTES = {
     collection: '/orders',
     byCode: (code: string) => `/orders/${encodeURIComponent(code)}`,
     pattern: '/orders/:code',
+    emails: (code: string) => `/orders/${encodeURIComponent(code)}/emails`,
+    emailsPattern: '/orders/:code/emails',
   },
   uploads: {
     productImage: '/uploads/product-image',
@@ -71,4 +73,23 @@ export interface OrderStatusUpdate {
   notice: EmailNotice | null;
   /** Avisos de etapas ya superadas que nunca se enviaron. */
   missed: EmailKind[];
+}
+
+/**
+ * Respuesta del checkout.
+ *
+ * Además del pedido devuelve el token que firma el link de seguimiento. Es
+ * seguro dárselo a quien acaba de generarlo —sirve para ese pedido y nada más,
+ * y le llega igual por mail—; sin esto el socio veía su código en pantalla y no
+ * tenía forma de entrar a ver en qué andaba.
+ */
+export interface OrderCreated {
+  order: Order;
+  statusToken: string;
+}
+
+/** Una página de pedidos del panel, con el total que matchea el filtro. */
+export interface OrderPage {
+  orders: Order[];
+  total: number;
 }

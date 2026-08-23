@@ -1,4 +1,6 @@
-import type { EmailKind } from '../../shared/domain/orderEmails.js';
+import type { EmailKind, EmailLogRecord } from '../../shared/domain/orderEmails.js';
+
+export type { EmailLogRecord };
 import { toHttpError } from './postgrestError.js';
 import { getSupabase } from './supabaseClient.js';
 
@@ -19,6 +21,8 @@ export interface EmailLogEntry {
 export interface EmailLogRepository {
   /** Qué avisos ya salieron para este pedido. Base de la idempotencia. */
   sentKinds(orderCode: string): Promise<EmailKind[]>;
+  /** Todo el historial del pedido, del más nuevo al más viejo. */
+  history(orderCode: string): Promise<EmailLogRecord[]>;
   record(entry: EmailLogEntry): Promise<void>;
 }
 
@@ -32,6 +36,24 @@ export const emailLogRepository: EmailLogRepository = {
 
     if (error) throw toHttpError(error, 'emailLog.sentKinds');
     return (data ?? []).map((row) => row.kind as EmailKind);
+  },
+
+  async history(orderCode) {
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .select('kind, status, recipient, error, created_at')
+      .eq('order_code', orderCode)
+      .order('created_at', { ascending: false });
+
+    if (error) throw toHttpError(error, 'emailLog.history');
+
+    return (data ?? []).map((row) => ({
+      kind: row.kind as EmailKind,
+      status: row.status as EmailLogStatus,
+      recipient: row.recipient as string,
+      error: (row.error as string | null) ?? null,
+      at: new Date(row.created_at as string).getTime(),
+    }));
   },
 
   async record(entry) {

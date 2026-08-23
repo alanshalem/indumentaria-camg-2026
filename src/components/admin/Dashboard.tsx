@@ -2,6 +2,7 @@ import { useState, type ComponentType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/ui';
+import { Picture } from '@/ui/Picture';
 import { OrdersPanel } from './orders/OrdersPanel';
 import { ProductsPanel } from './products/ProductsPanel';
 import { PromotionsPanel } from './promotions/PromotionsPanel';
@@ -40,7 +41,7 @@ export function Dashboard() {
     <div className={styles.wrap}>
       <header className={styles.topbar}>
         <div className={styles.brand}>
-          <img src="/images/logo-club.png" alt="" />
+          <Picture src="/images/logo-club.png" alt="" sizes="44px" />
           <div>
             <span className={styles.brandSub}>Panel administrativo</span>
             <h1 className={styles.brandTitle}>CAMG 2026</h1>

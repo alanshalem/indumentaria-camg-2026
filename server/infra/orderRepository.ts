@@ -1,5 +1,7 @@
+import type { OrderPage } from '../../shared/api/contracts.js';
 import type { Order, OrderStatus } from '../../shared/domain/order.js';
-import type { OrderQueryDto } from '../../shared/schemas/order.schema.js';
+import type { OrderFilters } from '../../shared/schemas/order.schema.js';
+import { ORDERS_PAGE_SIZE } from '../../shared/schemas/order.schema.js';
 import { notFound } from '../http/errors.js';
 import { toOrder, type OrderRow } from './mappers.js';
 import { toHttpError } from './postgrestError.js';
@@ -8,10 +10,10 @@ import { getSupabase } from './supabaseClient.js';
 const TABLE = 'orders';
 const COLUMNS =
   'code,customer_name,customer_last_name,phone,email,items,subtotal,promotions,total,status,created_at';
-const MAX_ROWS = 1000;
+export type { OrderPage };
 
 export interface OrderRepository {
-  list(filters?: OrderQueryDto): Promise<Order[]>;
+  list(filters?: OrderFilters): Promise<OrderPage>;
   findByCode(code: string): Promise<Order | null>;
   create(order: Order): Promise<Order>;
   updateStatus(code: string, status: OrderStatus): Promise<Order>;
@@ -22,7 +24,9 @@ const escapeLike = (value: string): string => value.replace(/[%_\\]/g, (char) =>
 
 export const orderRepository: OrderRepository = {
   async list(filters = {}) {
-    let query = getSupabase().from(TABLE).select(COLUMNS);
+    // `count: 'exact'` lo resuelve Postgres en la misma consulta: el panel
+    // necesita saber cuántos hay para poder paginar sin traerlos todos.
+    let query = getSupabase().from(TABLE).select(COLUMNS, { count: 'exact' });
 
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.from) query = query.gte('created_at', filters.from);
@@ -34,10 +38,19 @@ export const orderRepository: OrderRepository = {
       );
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false }).limit(MAX_ROWS);
+    const limit = Number(filters.limit ?? ORDERS_PAGE_SIZE);
+    const offset = Number(filters.offset ?? 0);
+
+    const { data, error, count } = await query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) throw toHttpError(error, 'orders.list');
-    return (data as unknown as OrderRow[]).map(toOrder);
+
+    return {
+      orders: (data as unknown as OrderRow[]).map(toOrder),
+      total: count ?? 0,
+    };
   },
 
   async findByCode(code) {

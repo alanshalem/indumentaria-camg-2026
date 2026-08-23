@@ -77,3 +77,28 @@
 }
 .details li span { color: var(--color-muted); }
 .details li strong { color: var(--color-white); }
+
+.pickup {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+/* El link firmado, el mismo que va en el mail. */
+.track {
+  display: block;
+  padding: 11px 16px;
+  border: 1px solid var(--color-red);
+  border-radius: var(--radius-sm);
+  color: var(--color-red-bright);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.track:hover {
+  background: rgba(220, 20, 60, 0.12);
+  text-decoration: none;
+}

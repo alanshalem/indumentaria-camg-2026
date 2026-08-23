@@ -341,6 +341,7 @@ WhatsApp aparece solo en los tres mails y en la página de seguimiento.
 | Necesito… | Comando / lugar |
 | --- | --- |
 | Cambiar un precio | Panel → Productos → Editar |
+| Sumar o cambiar una foto | Copiala a `public/images`, corré `npm run images` y deployá |
 | Apagar una promo | Panel → Promos → botón *Activa/Apagada* |
 | Cambiar el monto de un combo | Panel → Promos → *Editar valores* |
 | Agregar un producto nuevo | Panel → Productos → *+ Nuevo producto* |

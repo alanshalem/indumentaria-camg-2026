@@ -47,6 +47,15 @@ button {
 
 img { max-width: 100%; display: block; }
 
+/* El <picture> es sólo el envoltorio que elige el WebP: no participa del
+   layout, así que el CSS sigue apuntando al <img> como antes.
+
+   El `display: none` del <source> es obligatorio, no cosmético: con el padre
+   en `contents` sus hijos se vuelven items del grid o del flex de arriba, y el
+   <source> se comía una celda que desacomodaba toda la fila. */
+picture { display: contents; }
+picture > source { display: none; }
+
 input, select, textarea {
   font-family: inherit;
   background: var(--color-surface-2);

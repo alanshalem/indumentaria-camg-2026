@@ -1,5 +1,5 @@
 import type { Order, OrderItem, OrderStatus } from '../../shared/domain/order.js';
-import type { Product, ProductColor } from '../../shared/domain/product.js';
+import { isProductCategory, type Product, type ProductColor } from '../../shared/domain/product.js';
 import type { AppliedPromotion, PromotionDefinition, PromotionKind } from '../../shared/domain/promotions.js';
 import { isSizeChartId } from '../../shared/domain/sizeCharts.js';
 
@@ -15,6 +15,7 @@ export interface ProductRow {
   price_large: number;
   colors: ProductColor[] | null;
   size_chart_id: string | null;
+  category: string | null;
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -60,6 +61,9 @@ export const toProduct = (row: ProductRow): Product => ({
   priceLarge: row.price_large,
   colors: row.colors ?? [],
   sizeChartId: isSizeChartId(row.size_chart_id) ? row.size_chart_id : null,
+  // Un valor desconocido no rompe el catálogo: cae en accesorios y el filtro
+  // sigue funcionando hasta que alguien lo corrija desde el panel.
+  category: isProductCategory(row.category) ? row.category : 'accesorios',
   isActive: row.is_active,
   sortOrder: row.sort_order,
   createdAt: row.created_at,

@@ -18,6 +18,7 @@ npm install
 npm run dev         # Vite + la API montada en /api (no hace falta `vercel dev`)
 npm run db:setup    # crea las tablas y carga el catálogo del manual
 npm run db:check    # muestra qué hay cargado en la base
+npm run images      # genera los WebP de public/images (idempotente)
 npm run typecheck   # tsc strict sobre src, server, shared, api y tests
 npm test            # vitest
 npm run build       # typecheck + build de producción
@@ -76,7 +77,8 @@ Base: `/api`. Todas las respuestas usan el mismo sobre: `{ data }` en el éxito,
 | `GET` | `/promotions` | público | Promos activas, para previsualizar el descuento en el carrito |
 | `PATCH` | `/promotions/:id` | **admin** | Prende/apaga una promo o cambia sus montos |
 | `POST` | `/uploads/product-image` | **admin** | Sube una imagen (base64, ≤ 4 MB) a Supabase Storage |
-| `GET` | `/orders` | **admin** | Lista pedidos con filtros de estado, texto y rango de fechas |
+| `GET` | `/orders` | **admin** | Lista pedidos paginados (50 por página) con filtros de estado, texto y fechas |
+| `GET` | `/orders/:code/emails` | **admin** | Historial de avisos enviados de ese pedido |
 | `POST` | `/orders` | público | Checkout del socio |
 | `GET` | `/orders/:code?t=…` | **firmado** | Seguimiento del pedido. Sin `t` válido devuelve 404 |
 | `PATCH` | `/orders/:code` | **admin** | Cambia el estado del pedido |
@@ -154,3 +156,25 @@ Dos consecuencias concretas:
 
 El CAPTCHA del login sigue siendo client-side y **no** es una defensa: es
 fricción contra bots triviales. La protección real es el rate limit del servidor.
+
+---
+
+## Imágenes
+
+Los originales viven en `public/images` y **no se tocan**: son el archivo de
+trabajo del club y el fallback del `<picture>`. `npm run images` genera los
+derivados WebP en `public/images/opt` y escribe `shared/media/imageManifest.ts`
+con los anchos que realmente quedaron en disco.
+
+El `srcset` sale del manifiesto y no de la configuración, porque el generador
+saltea los anchos mayores al original: pedir `pantalon-1200.webp` cuando el
+original mide 1122 devolvía un 404.
+
+En el componente `<Picture>` el `src` sigue siendo la ruta original —la que
+guarda la base y la que edita el admin—, así que una imagen subida a Supabase
+Storage, que no tiene derivados, se degrada sola a un `<img>` común.
+
+| | Antes | Ahora |
+| --- | --- | --- |
+| Set completo | 4,9 MB | 746 KB en derivados |
+| Home entera, scrolleada | ~1,5 MB en el primer viewport | **182 KB**, sin bajar un solo original |

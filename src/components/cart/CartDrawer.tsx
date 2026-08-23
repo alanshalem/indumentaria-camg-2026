@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { formatPrice } from '@shared/domain/money';
-import type { Order } from '@shared/domain/order';
+import type { OrderCreated } from '@shared/api/contracts';
 import { evaluatePromotions } from '@shared/domain/promotions';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { cartUnitCount, cartUnits, lineKey, useCartStore } from '@/store/cartStore';
 import { useCatalogStore } from '@/store/catalogStore';
 import { Button, EmptyState, QuantityStepper } from '@/ui';
+import { Picture } from '@/ui/Picture';
 import { CheckoutForm } from '@/components/checkout/CheckoutForm';
 import { OrderConfirmation } from '@/components/checkout/OrderConfirmation';
+import { PromoNudge } from '@/components/promotions/PromoNudge';
 import { CartSummary } from './CartSummary';
 import styles from './CartDrawer.module.css';
 
@@ -32,7 +34,7 @@ export function CartDrawer() {
   const promotions = useCatalogStore((state) => state.promotions);
 
   const [stage, setStage] = useState<Stage>('cart');
-  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<OrderCreated | null>(null);
 
   useBodyScrollLock(isOpen);
   useEscapeKey(isOpen, closeCart);
@@ -95,7 +97,7 @@ export function CartDrawer() {
                   const key = lineKey(line);
                   return (
                     <li key={key} className={styles.item}>
-                      <img src={line.image} alt="" className={styles.itemImg} />
+                      <Picture src={line.image} alt="" sizes="64px" className={styles.itemImg} />
                       <div className={styles.itemInfo}>
                         <p className={styles.itemName}>{line.productName}</p>
                         <p className={styles.itemMeta}>
@@ -120,19 +122,23 @@ export function CartDrawer() {
               </ul>
             ))}
 
+          {/* El hueco entre la lista y el total era el mejor lugar de la app
+              para decir qué promo está cerca, y estaba vacío. */}
+          {stage === 'cart' && lines.length > 0 && <PromoNudge />}
+
           {stage === 'checkout' && (
             <CheckoutForm
               outcome={outcome}
               onBack={() => setStage('cart')}
-              onComplete={(order) => {
-                setPlacedOrder(order);
+              onComplete={(created) => {
+                setPlacedOrder(created);
                 setStage('done');
               }}
             />
           )}
 
           {stage === 'done' && placedOrder && (
-            <OrderConfirmation order={placedOrder} onClose={closeCart} />
+            <OrderConfirmation created={placedOrder} onClose={closeCart} />
           )}
         </div>
 
@@ -142,6 +148,9 @@ export function CartDrawer() {
             <Button block onClick={() => setStage('checkout')}>
               Generar pedido
             </Button>
+            <button type="button" className={styles.keepShopping} onClick={closeCart}>
+              Seguir comprando
+            </button>
           </div>
         )}
       </aside>

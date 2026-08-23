@@ -230,19 +230,25 @@ const RULES: Record<PromotionKind, PromotionRule> = {
   sameProductDifferentSize,
 };
 
-export function evaluatePromotions(
-  units: readonly PricedUnit[],
-  definitions: readonly PromotionDefinition[],
-): PromotionOutcome {
-  const subtotal = sumPrices(units);
-  let available = [...units];
-  const discounts: AppliedPromotion[] = [];
-
-  const active = definitions
+/** Las promos activas que el motor sabe aplicar, en orden. */
+const activeRules = (definitions: readonly PromotionDefinition[]): PromotionDefinition[] =>
+  definitions
     .filter((definition) => definition.isActive && definition.kind in RULES)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  for (const definition of active) {
+/**
+ * Corre todas las reglas y devuelve qué se descontó y qué prendas quedaron
+ * sueltas. Los sobrantes son la base para avisar qué promo está a un producto
+ * de distancia.
+ */
+function runRules(
+  units: readonly PricedUnit[],
+  definitions: readonly PromotionDefinition[],
+): { discounts: AppliedPromotion[]; leftovers: PricedUnit[] } {
+  let available = [...units];
+  const discounts: AppliedPromotion[] = [];
+
+  for (const definition of activeRules(definitions)) {
     const result = RULES[definition.kind](available, definition);
     if (result.consumed.length === 0) continue;
 
@@ -250,6 +256,16 @@ export function evaluatePromotions(
     const spent = new Set(result.consumed);
     available = available.filter((unit) => !spent.has(unit));
   }
+
+  return { discounts, leftovers: available };
+}
+
+export function evaluatePromotions(
+  units: readonly PricedUnit[],
+  definitions: readonly PromotionDefinition[],
+): PromotionOutcome {
+  const subtotal = sumPrices(units);
+  const { discounts } = runRules(units, definitions);
 
   const discountTotal = discounts.reduce((total, discount) => total + discount.amount, 0);
 
@@ -310,5 +326,93 @@ export function expandUnits<T extends { quantity: number }>(
   return lines.flatMap((line, index) => {
     const unit = toUnit(line, index);
     return Array.from({ length: line.quantity }, () => ({ ...unit }));
+  });
+}
+
+// ---------------------------------------------------------------------------
+//  Promos a un producto de distancia
+// ---------------------------------------------------------------------------
+
+/** Qué le falta al carrito para que una promo se active. */
+export interface NearbyPromotion {
+  definition: PromotionDefinition;
+  /** Producto que hay que sumar. */
+  productId: string;
+  /** El combo pide otro producto; la promo familia, otro talle del mismo. */
+  reason: 'otherProduct' | 'anotherSize';
+  /** Cuánto ahorraría, o `null` si depende del talle que elija. */
+  savings: Ars | null;
+}
+
+/** Precio de un producto en un tramo, o `null` si ese tramo no existe. */
+export type PriceLookup = (productId: string, tier: SizeTier) => Ars | null;
+
+/**
+ * Promos que se activarían agregando una sola prenda más.
+ *
+ * Las promos son el motor de venta del club y estaban anunciadas arriba de
+ * todo, donde nadie las relaciona con lo que tiene en el carrito. Esto se
+ * calcula sobre las prendas que **sobraron** después de aplicar todo lo que ya
+ * corresponde, así que nunca sugiere algo que el socio ya se ganó.
+ */
+export function nearbyPromotions(
+  units: readonly PricedUnit[],
+  definitions: readonly PromotionDefinition[],
+  priceOf: PriceLookup,
+): NearbyPromotion[] {
+  if (units.length === 0) return [];
+
+  const { leftovers } = runRules(units, definitions);
+  const nearby: NearbyPromotion[] = [];
+
+  for (const definition of activeRules(definitions)) {
+    if (definition.kind === 'combo') {
+      if (!isComboConfig(definition.config)) continue;
+      const config = definition.config;
+      const [firstId, secondId] = config.productIds;
+      if (firstId === secondId) continue;
+
+      const has = (id: string) => leftovers.find((unit) => unit.productId === id) ?? null;
+      const owned = has(firstId) ?? has(secondId);
+      const missing = has(firstId) ? secondId : has(secondId) ? firstId : null;
+
+      // Si sobraron los dos, el combo ya se armó con otros y no falta nada.
+      if (!owned || !missing || (has(firstId) && has(secondId))) continue;
+
+      const missingPrice = priceOf(missing, owned.tier);
+      const bundle = owned.tier === 'small' ? config.bundlePriceSmall : config.bundlePriceLarge;
+      const savings =
+        missingPrice === null ? null : Math.max(0, owned.unitPrice + missingPrice - bundle);
+
+      nearby.push({ definition, productId: missing, reason: 'otherProduct', savings });
+      continue;
+    }
+
+    if (definition.kind === 'sameProductDifferentSize') {
+      // Una sola prenda suelta de un producto: con otra de distinto talle entra.
+      const alone = leftovers.filter(
+        (unit) => leftovers.filter((other) => other.productId === unit.productId).length === 1,
+      );
+
+      for (const unit of alone) {
+        // El descuento cae sobre la más barata de las dos y todavía no sabemos
+        // qué talle va a elegir: decirle un número sería inventarlo.
+        nearby.push({
+          definition,
+          productId: unit.productId,
+          reason: 'anotherSize',
+          savings: null,
+        });
+      }
+    }
+  }
+
+  // Una fila por producto faltante: dos avisos que piden lo mismo son ruido.
+  const seen = new Set<string>();
+  return nearby.filter((item) => {
+    const key = `${item.definition.id}|${item.productId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }

@@ -1,4 +1,5 @@
 import styles from './Hero.module.css';
+import { Picture } from '@/ui/Picture';
 
 export function Hero() {
   return (
@@ -19,7 +20,13 @@ export function Hero() {
           </a>
         </div>
         <div className={styles.logoWrap}>
-          <img src="/images/logo-club.png" alt="" className={styles.logo} />
+          <Picture
+            src="/images/logo-club.png"
+            alt=""
+            sizes="(max-width: 700px) 140px, 180px"
+            className={styles.logo}
+            eager
+          />
         </div>
       </div>
     </section>

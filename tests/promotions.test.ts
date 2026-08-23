@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   comboPartnerOf,
   evaluatePromotions,
+  nearbyPromotions,
   expandUnits,
   promotionNamesProduct,
   promotionsForProduct,
@@ -264,5 +265,77 @@ describe('promociones por producto', () => {
     expect(comboPartnerOf(COMBO, 'buzo-medio-cierre')).toBe('pantalon-con-cierre');
     expect(comboPartnerOf(COMBO, 'pantalon-con-cierre')).toBe('buzo-medio-cierre');
     expect(comboPartnerOf(FAMILIA, 'remera-algodon')).toBeNull();
+  });
+});
+
+describe('promos a un producto de distancia', () => {
+  // Precios del catalogo, como los busca el carrito.
+  const priceOf = (productId: string, tier: SizeTier) => {
+    if (productId === 'buzo-medio-cierre') return PRICES.buzoMedioCierre[tier];
+    if (productId === 'pantalon-con-cierre') return PRICES.pantalon[tier];
+    if (productId === 'remera-algodon') return PRICES.remera[tier];
+    return null;
+  };
+
+  it('avisa que falta el pantalon y cuanto se ahorra', () => {
+    const nearby = nearbyPromotions([buzo('M', 'large')], [COMBO], priceOf);
+
+    expect(nearby).toHaveLength(1);
+    expect(nearby[0]).toMatchObject({
+      productId: 'pantalon-con-cierre',
+      reason: 'otherProduct',
+      // 45500 + 48500 = 94000 contra 85000 de combo.
+      savings: 9000,
+    });
+  });
+
+  it('avisa al reves si lo que hay es el pantalon', () => {
+    const nearby = nearbyPromotions([pantalon('M', 'large')], [COMBO], priceOf);
+
+    expect(nearby[0]).toMatchObject({ productId: 'buzo-medio-cierre', reason: 'otherProduct' });
+  });
+
+  it('usa el precio del tramo de la prenda que ya esta en el carrito', () => {
+    const nearby = nearbyPromotions([buzo('8', 'small')], [COMBO], priceOf);
+
+    // 41000 + 44000 = 85000 contra 75000 del combo chico.
+    expect(nearby[0]?.savings).toBe(10000);
+  });
+
+  it('no avisa nada cuando el combo ya esta armado', () => {
+    const nearby = nearbyPromotions(
+      [buzo('M', 'large'), pantalon('M', 'large')],
+      [COMBO],
+      priceOf,
+    );
+
+    expect(nearby).toEqual([]);
+  });
+
+  it('avisa que con otro talle del mismo producto entra la promo familia', () => {
+    const nearby = nearbyPromotions([remera('M', 'large')], [FAMILIA], priceOf);
+
+    expect(nearby[0]).toMatchObject({
+      productId: 'remera-algodon',
+      reason: 'anotherSize',
+      // Depende de que talle elija: inventar un numero seria mentir.
+      savings: null,
+    });
+  });
+
+  it('no avisa de la promo familia si ya hay dos talles del producto', () => {
+    const nearby = nearbyPromotions([remera('M', 'large'), remera('12', 'small')], [FAMILIA], priceOf);
+
+    expect(nearby.filter((item) => item.definition.id === 'familia-camg')).toEqual([]);
+  });
+
+  it('un carrito vacio no sugiere nada', () => {
+    expect(nearbyPromotions([], [COMBO, FAMILIA], priceOf)).toEqual([]);
+  });
+
+  it('una promo apagada no se sugiere', () => {
+    const nearby = nearbyPromotions([buzo('M', 'large')], [{ ...COMBO, isActive: false }], priceOf);
+
+    expect(nearby).toEqual([]);
   });
 });

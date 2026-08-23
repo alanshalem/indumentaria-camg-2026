@@ -3,7 +3,9 @@ import type { SizeChartId } from '@shared/domain/sizeCharts';
 
 interface SizeChartState {
   activeId: SizeChartId | null;
-  open: (id: SizeChartId) => void;
+  /** Talle elegido en la ficha, para resaltar su fila en la tabla. */
+  highlight: string | null;
+  open: (id: SizeChartId, highlight?: string) => void;
   close: () => void;
 }
 
@@ -14,6 +16,7 @@ interface SizeChartState {
  */
 export const useSizeChartStore = create<SizeChartState>()((set) => ({
   activeId: null,
-  open: (id) => set({ activeId: id }),
-  close: () => set({ activeId: null }),
+  highlight: null,
+  open: (id, highlight) => set({ activeId: id, highlight: highlight ?? null }),
+  close: () => set({ activeId: null, highlight: null }),
 }));
