@@ -11,6 +11,20 @@ export interface ServerConfig {
   sessionTtlMs: number;
   imageBucket: string;
   isProduction: boolean;
+  email: EmailConfig;
+}
+
+/**
+ * Config de mails. Es TODA opcional a propósito: sin `RESEND_API_KEY` la app
+ * funciona igual y los envíos quedan registrados como omitidos. Un pedido
+ * jamás puede fallar porque el proveedor de mail no esté configurado.
+ */
+export interface EmailConfig {
+  apiKey: string | null;
+  from: string;
+  replyTo: string | null;
+  /** Base absoluta para el logo y los links del mail. */
+  siteUrl: string;
 }
 
 export class ConfigError extends Error {
@@ -25,6 +39,7 @@ export class ConfigError extends Error {
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const DEFAULT_BUCKET = 'product-images';
+const DEFAULT_SITE_URL = 'https://indumentaria-camg-2026.vercel.app';
 
 const read = (...keys: string[]): string | undefined => {
   for (const key of keys) {
@@ -63,12 +78,15 @@ export function getConfig(): ServerConfig {
     sessionTtlMs: SESSION_TTL_MS,
     imageBucket: read('SUPABASE_IMAGE_BUCKET') ?? DEFAULT_BUCKET,
     isProduction: process.env.NODE_ENV === 'production',
+    email: {
+      apiKey: read('RESEND_API_KEY') ?? null,
+      // El default de Resend sólo entrega a la casilla dueña de la cuenta:
+      // sirve para revisar los mails antes de tener un dominio verificado.
+      from: read('EMAIL_FROM') ?? 'CAMG <onboarding@resend.dev>',
+      replyTo: read('EMAIL_REPLY_TO') ?? null,
+      siteUrl: (read('PUBLIC_SITE_URL') ?? DEFAULT_SITE_URL).replace(/\/+$/, ''),
+    },
   };
 
   return cached;
 }
-
-/** Sólo para tests: invalida el singleton. */
-export const resetConfigCache = (): void => {
-  cached = null;
-};

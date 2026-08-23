@@ -19,6 +19,12 @@ export const orderRoutes = new Router()
       return ok(await ordersService.list(filters));
     }),
   )
+  // Público con firma: el seguimiento del pedido que se linkea desde el mail.
+  // No lleva `adminOnly` porque la autorización es el token, no una sesión.
+  .get(ROUTES.orders.pattern, async (request) => {
+    const code = parseOrThrow(orderCodeSchema, request.params.code, 'Código inválido');
+    return ok(await ordersService.findPublic(code, request.query.t ?? ''));
+  })
   // Público: es el checkout del socio. El servidor pone precios y código.
   .post(ROUTES.orders.collection, async (request) => {
     const input = parseOrThrow(createOrderSchema, request.body, 'No se pudo generar el pedido');

@@ -101,15 +101,6 @@ export const priceForTier = (
   tier: SizeTier,
 ): Ars => (tier === 'small' ? product.priceSmall : product.priceLarge);
 
-/** Precio del talle, o `null` si el talle no pertenece al producto. */
-export function priceForSize(
-  product: Pick<Product, 'sizesSmall' | 'sizesLarge' | 'priceSmall' | 'priceLarge'>,
-  size: string,
-): Ars | null {
-  const tier = sizeTierOf(product, size);
-  return tier ? priceForTier(product, tier) : null;
-}
-
 /** Rango a mostrar en la ficha cuando los dos tiers valen distinto. */
 export const priceRange = (
   product: Pick<Product, 'priceSmall' | 'priceLarge' | 'sizesSmall' | 'sizesLarge'>,

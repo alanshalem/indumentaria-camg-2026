@@ -1,4 +1,4 @@
-import { ROUTES } from '@shared/api/contracts';
+import { ROUTES, type UploadResponse } from '@shared/api/contracts';
 import type { Product, ProductInput } from '@shared/domain/product';
 import type { ProductImageUploadDto } from '@shared/schemas/product.schema';
 import { httpClient } from './httpClient';
@@ -32,7 +32,7 @@ export const catalogService = {
       contentType: file.type as ProductImageUploadDto['contentType'],
       dataBase64: await toBase64(file),
     };
-    const { url } = await httpClient.post<{ url: string }>(ROUTES.uploads.productImage, payload);
+    const { url } = await httpClient.post<UploadResponse>(ROUTES.uploads.productImage, payload);
     return url;
   },
 };

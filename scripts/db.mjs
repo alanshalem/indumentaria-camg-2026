@@ -18,7 +18,8 @@ import pg from 'pg';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const FILES = {
-  migrate: ['db/migrations/0001_init.sql'],
+  // En orden: cada migración asume que corrieron las anteriores.
+  migrate: ['db/migrations/0001_init.sql', 'db/migrations/0002_order_emails.sql'],
   seed: ['db/seed.sql'],
 };
 
@@ -147,6 +148,7 @@ async function check(client) {
       (select count(*) from public.products where is_active)        as productos_visibles,
       (select count(*) from public.promotions where is_active)      as promos_activas,
       (select count(*) from public.orders)                          as pedidos,
+      (select count(*) from public.email_log where status = 'sent') as mails_enviados,
       (select count(*) from storage.buckets where id = 'product-images') as bucket
   `);
 
@@ -155,6 +157,7 @@ async function check(client) {
   console.log(`    productos ............ ${summary.productos} (${summary.productos_visibles} visibles)`);
   console.log(`    promociones activas .. ${summary.promos_activas}`);
   console.log(`    pedidos .............. ${summary.pedidos}`);
+  console.log(`    mails enviados ....... ${summary.mails_enviados}`);
   console.log(`    bucket de imágenes ... ${Number(summary.bucket) > 0 ? 'ok' : 'FALTA'}`);
 
   const { rows: catalog } = await client.query(`

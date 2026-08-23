@@ -5,6 +5,7 @@ import {
   ORDER_STATUS_LABELS,
   type Order,
   type OrderItem,
+  type OrderStatus,
 } from '@shared/domain/order.js';
 import { formatPhone } from '@shared/domain/phone.js';
 import { compareSizes, SIZE_TIER_LABELS } from '@shared/domain/product.js';
@@ -29,10 +30,12 @@ const TOTALS_BG = '#F3F4F6';
 const MONEY = '"$"#,##0';
 const DATE_TIME = 'dd/mm/yyyy hh:mm';
 
-const STATUS_STYLE = {
+const STATUS_STYLE: Record<OrderStatus, { textColor: string; backgroundColor: string }> = {
   pending: { textColor: '#B45309', backgroundColor: '#FEF3C7' },
+  paid: { textColor: '#1D4ED8', backgroundColor: '#DBEAFE' },
+  ready: { textColor: '#6D28D9', backgroundColor: '#EDE9FE' },
   delivered: { textColor: '#166534', backgroundColor: '#DCFCE7' },
-} as const;
+};
 
 /** El paquete no exporta el tipo de columna, así que se declara acá. */
 interface ColumnWidth {

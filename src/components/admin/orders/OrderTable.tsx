@@ -3,10 +3,12 @@ import { formatPrice } from '@shared/domain/money';
 import {
   countOrderUnits,
   customerFullName,
-  nextStatus,
+  ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   type Order,
+  type OrderStatus,
 } from '@shared/domain/order';
+import { EMAIL_KIND_LABELS, emailKindForStatus } from '@shared/domain/orderEmails';
 import { formatPhone, whatsappLink } from '@shared/domain/phone';
 import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
@@ -24,11 +26,13 @@ export function OrderTable({ orders, onStatusChange }: Props) {
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  async function toggleStatus(order: Order) {
+  async function changeStatus(order: Order, status: OrderStatus) {
+    if (status === order.status) return;
     setError('');
     setPendingCode(order.code);
     try {
-      onStatusChange(await orderService.updateStatus(order.code, nextStatus(order.status)));
+      // El servidor decide si corresponde mandar mail y evita duplicados.
+      onStatusChange(await orderService.updateStatus(order.code, status));
     } catch (caught) {
       setError(errorMessage(caught, 'No se pudo actualizar el estado.'));
     } finally {
@@ -88,15 +92,26 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                       {saved > 0 && <span className={styles.saved}>−{formatPrice(saved)}</span>}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className={`${styles.statusPill} ${styles[order.status]}`}
-                        onClick={() => void toggleStatus(order)}
+                      <select
+                        className={`${styles.statusSelect} ${styles[order.status]}`}
+                        value={order.status}
                         disabled={pendingCode === order.code}
-                        title="Cambiar estado"
+                        onChange={(event) =>
+                          void changeStatus(order, event.target.value as OrderStatus)
+                        }
+                        aria-label={`Estado del pedido ${order.code}`}
+                        title={
+                          emailKindForStatus(order.status)
+                            ? `Al pasar a este estado se le manda al socio: "${EMAIL_KIND_LABELS[emailKindForStatus(order.status)!]}"`
+                            : 'Este estado no dispara ningún mail'
+                        }
                       >
-                        {ORDER_STATUS_LABELS[order.status]}
-                      </button>
+                        {ORDER_STATUSES.map((status) => (
+                          <option key={status} value={status}>
+                            {ORDER_STATUS_LABELS[status]}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>
                       <button

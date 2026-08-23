@@ -1,18 +1,22 @@
 import { randomInt } from 'node:crypto';
-import type {
-  CreateOrderInput,
-  Order,
-  OrderItem,
-  OrderStatus,
+import {
+  toPublicOrder,
+  type CreateOrderInput,
+  type Order,
+  type OrderItem,
+  type OrderStatus,
+  type PublicOrder,
 } from '../../../shared/domain/order.js';
 import { generateOrderCode } from '../../../shared/domain/orderCode.js';
 import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product.js';
 import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions.js';
 import type { OrderQueryDto } from '../../../shared/schemas/order.schema.js';
-import { conflict, internalError, isHttpError, validationError } from '../../http/errors.js';
+import { conflict, internalError, isHttpError, notFound, validationError } from '../../http/errors.js';
+import { verifyOrderToken } from '../../security/orderToken.js';
 import { orderRepository, type OrderRepository } from '../../infra/orderRepository.js';
 import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
 import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
+import { emailsService, type EmailsService } from '../emails/emails.service.js';
 
 const CODE_ATTEMPTS = 5;
 
@@ -22,6 +26,8 @@ const cryptoRandomInts = (count: number, max: number): number[] =>
 
 export interface OrdersService {
   list(filters: OrderQueryDto): Promise<Order[]>;
+  /** Seguimiento público: sólo lo abre quien tiene el link firmado del mail. */
+  findPublic(code: string, token: string): Promise<PublicOrder>;
   create(input: CreateOrderInput): Promise<Order>;
   updateStatus(code: string, status: OrderStatus): Promise<Order>;
 }
@@ -30,9 +36,21 @@ export function createOrdersService(
   orders: OrderRepository = orderRepository,
   products: ProductRepository = productRepository,
   promotions: PromotionRepository = promotionRepository,
+  emails: EmailsService = emailsService,
 ): OrdersService {
   return {
     list: (filters) => orders.list(filters),
+
+    async findPublic(code, token) {
+      // Un token inválido devuelve 404, no 401: así la respuesta no confirma
+      // si ese código de pedido existe.
+      if (!verifyOrderToken(code, token)) throw notFound('No encontramos ese pedido.');
+
+      const order = await orders.findByCode(code);
+      if (!order) throw notFound('No encontramos ese pedido.');
+
+      return toPublicOrder(order);
+    },
 
     async create(input) {
       const items = await priceItems(input, products);
@@ -59,7 +77,11 @@ export function createOrdersService(
           status: 'pending',
         };
         try {
-          return await orders.create(order);
+          const saved = await orders.create(order);
+          // El pedido ya está guardado: el aviso es un efecto posterior que
+          // nunca puede hacer fallar el checkout.
+          await emails.notifyStatus(saved);
+          return saved;
         } catch (error) {
           if (!isHttpError(error) || error.code !== 'CONFLICT') throw error;
         }
@@ -67,7 +89,11 @@ export function createOrdersService(
       throw internalError('No se pudo generar un código de pedido único. Reintentá.');
     },
 
-    updateStatus: (code, status) => orders.updateStatus(code, status),
+    async updateStatus(code, status) {
+      const updated = await orders.updateStatus(code, status);
+      await emails.notifyStatus(updated);
+      return updated;
+    },
   };
 }
 

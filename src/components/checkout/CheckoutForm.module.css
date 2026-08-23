@@ -62,3 +62,27 @@
   text-align: center;
   line-height: 1.4;
 }
+
+/* Sugerencia de typo en el dominio del mail. Es un botón: un click lo corrige. */
+.suggestion {
+  align-self: flex-start;
+  margin-top: -8px;
+  padding: 8px 12px;
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 0.84rem;
+  color: #fbbf24;
+  text-align: left;
+  line-height: 1.4;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.suggestion:hover {
+  border-style: solid;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.suggestion strong {
+  color: var(--color-white);
+}

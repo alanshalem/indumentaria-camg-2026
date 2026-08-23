@@ -140,6 +140,198 @@ Con la URL que te da Vercel:
 
 ---
 
+## Mails automáticos (Resend)
+
+El pedido pasa por cuatro estados y tres de ellos le mandan un mail al socio:
+
+| Estado | Mail |
+| --- | --- |
+| Pendiente de pago | *Recibimos tu pedido* — código, detalle, total y cómo pagar |
+| Pago confirmado | *Confirmamos tu pago* — ya lo encargamos |
+| Listo para retirar | *Pasá a buscarlo* — dirección y horarios |
+| Entregado | ninguno |
+
+El estado se cambia desde **Panel → Pedidos → columna Estado**. Cada aviso se
+manda **una sola vez por pedido**: si movés el estado de ida y vuelta, el socio
+no recibe repetidos.
+
+**Sin `RESEND_API_KEY` la app funciona igual.** Los envíos quedan registrados
+como `skipped` en la tabla `email_log` y ningún pedido falla por esto.
+
+### Configurar el dominio del remitente, paso a paso
+
+Dominio: **clubatleticomontegrande.com.ar**, comprado en nic.ar **sólo para
+mandar mails**. El sitio sigue viviendo en `indumentaria-camg-2026.vercel.app`.
+
+> **El dominio del remitente y el del sitio son independientes.** Los mails
+> pueden salir desde `pedidos@clubatleticomontegrande.com.ar` mientras la tienda
+> sigue en `.vercel.app`. Tampoco hace falta crear la casilla `pedidos@`: es sólo
+> el remitente. Los mails son de **sólo ida**: nadie contesta esa casilla, y el
+> pie de cada mail remite al WhatsApp del club.
+
+#### 0 · Sacar el dominio del proyecto de Vercel
+
+Si lo agregaste en Vercel → Settings → Domains, **quitalo** (la raíz y el `www`).
+No va a servir la página, así que sólo deja dos carteles de *Invalid
+Configuration* para siempre y un redirect que no querés.
+
+#### 1 · Un DNS donde vivan los registros
+
+**NIC.ar no hospeda registros**: sólo delega el dominio a servidores externos y
+ahí se cargan `MX`, `TXT`, etc. Así que hace falta un DNS host. Cloudflare es
+gratis y alcanza de sobra:
+
+1. [cloudflare.com](https://dash.cloudflare.com) → cuenta gratis →
+   **Add a site** → `clubatleticomontegrande.com.ar` → plan **Free**.
+2. Te da **dos nameservers** (`algo.ns.cloudflare.com`). Copialos.
+3. [nic.ar](https://nic.ar) → Clave Fiscal → **Mis dominios** → el dominio →
+   **Delegación** → cargás esos dos hostnames.
+
+   > Dos trampas de esa pantalla:
+   > - **No tildes "Autodelegar".** Esa opción es sólo para nameservers que viven
+   >   dentro del propio dominio (`ns1.tudominio.com.ar`). Los de Cloudflare son
+   >   externos; si la tildás te pide IPs y la delegación queda mal.
+   > - **No cargues IPs.** Cloudflare ya tiene sus registros de pegamento en el
+   >   TLD, nic.ar los resuelve solo.
+   >
+   > Cloudflare asigna el mismo par de nameservers a todas las zonas de una
+   > misma cuenta, así que si ya tenés otros dominios ahí, van a ser los mismos.
+   > Igual confirmá contra lo que muestre Cloudflare para *esta* zona: un
+   > nameserver equivocado son 24–48 h de ida y vuelta.
+4. La propagación puede tardar hasta 24–48 h, aunque suele ser bastante menos.
+   Cloudflare te avisa por mail cuando el dominio queda *Active*.
+
+#### 2 · Verificar el dominio en Resend
+
+1. [resend.com](https://resend.com) → cuenta → **Domains → Add Domain**.
+2. Escribí el dominio **con muchísimo cuidado**: `clubatleticomontegrande.com.ar`.
+   Un typo acá no da error — Resend acepta cualquier texto y te genera registros
+   para un dominio que no controlás. Después nunca verifica y no se entiende por
+   qué. Si te equivocaste: borrá ese dominio en Resend y agregalo de nuevo (la
+   clave DKIM se regenera, así que no sirven los registros viejos).
+3. Elegí la región más cercana (São Paulo).
+4. Resend te lista los registros. **Hay dos variantes** según la cuenta y la
+   región, así que copiá los de tu panel, no los de acá:
+
+   | Variante | Registros |
+   | --- | --- |
+   | CNAME | `TXT resend._domainkey` + `CNAME send` y `CNAME rsend` hacia `…forge.rmta.net` |
+   | MX/SPF | `TXT resend._domainkey` + `MX send` y `TXT send` (SPF) |
+
+5. Cloudflare → **DNS → Records → Add record** → cargás los que te haya dado.
+
+   > **Tres trampas de Cloudflare acá:**
+   > - **Los CNAME hay que ponerlos en "DNS only" (nube gris), NO proxeados.**
+   >   Cloudflare deja el proxy prendido por defecto y eso rompe el mail. Los
+   >   `TXT` y `MX` no tienen esa opción, sólo los `CNAME`.
+   > - En *Name* va **sólo la parte corta** (`send`, `rsend`,
+   >   `resend._domainkey`). Cloudflare le agrega el dominio solo; si escribís el
+   >   nombre completo queda duplicado.
+   > - El valor del DKIM es largo: pegalo entero, sin cortar ni agregar espacios.
+
+6. **Ignorá la sección "Enable Receiving"** de Resend. Eso es para recibir mails
+   en el dominio y agrega `MX` en la raíz: no lo necesitás —los mails son de sólo
+   ida— y esos `MX` chocarían con Zoho si alguna vez lo sumás.
+7. Resend → **Verify**. Tarda unos minutos.
+
+#### 3 · La API key
+
+Resend → **API Keys → Create API Key**, permiso *Sending access*. Empieza con
+`re_` y **se muestra una sola vez**.
+
+#### 4 · Cargar las variables
+
+En `.env.local` y en Vercel → **Settings → Environment Variables**:
+
+```env
+RESEND_API_KEY=re_xxxxxxxxxxxx
+EMAIL_FROM=CAMG <pedidos@clubatleticomontegrande.com.ar>
+
+# El SITIO no se mudó: esto queda apuntando a Vercel.
+PUBLIC_SITE_URL=https://indumentaria-camg-2026.vercel.app
+```
+
+`EMAIL_REPLY_TO` **no se carga**: sin reply-to, una respuesta rebota contra una
+casilla que no existe, que es justamente lo que queremos. Está documentada en
+`.env.example` por si algún día el club quiere recibir respuestas.
+
+`PUBLIC_SITE_URL` no es sólo el logo: de ahí sale el link *"Ver el estado de mi
+pedido"* que lleva cada mail. Mal apuntada, el botón va a un sitio que no existe.
+
+Los datos del club —alias de pago, dirección, horarios, teléfono— **no son
+variables de entorno**: viven en `shared/domain/club.ts`. No son secretos (salen
+impresos en cada mail) y como env vars fallaban en silencio: si faltaba alguna
+en Vercel, el mail salía igual pero sin decir cómo pagar.
+
+**En Vercel, las variables nuevas exigen un redeploy** para tomar efecto
+(Deployments → el último → *Redeploy*).
+
+#### 5 · Probar antes de que lo vea un socio
+
+```bash
+npm run email:test -- tumail@gmail.com
+npm run email:test -- tumail@gmail.com paymentConfirmed
+npm run email:test -- tumail@gmail.com readyForPickup
+```
+
+Usa la misma plantilla, el mismo transporte y la misma config que un pedido
+real, pero con datos inventados: no ensucia el panel.
+
+#### 6 · Si algo falla
+
+| Síntoma | Causa |
+| --- | --- |
+| `Omitido: Falta RESEND_API_KEY` | No cargaste la variable, o corrés sin `.env.local` |
+| `Falló: ... 403` | El dominio todavía no está verificado en Resend |
+| `Falló: ... 422` | El dominio de `EMAIL_FROM` no es el verificado |
+| Resend no verifica | El dominio todavía no propagó: `nslookup -type=NS clubatleticomontegrande.com.ar 8.8.8.8` tiene que devolver los NS de Cloudflare |
+| Llega pero sin logo | `PUBLIC_SITE_URL` mal: apuntá a donde vive el SITIO, no al dominio del remitente |
+
+Historial de envíos de pedidos reales:
+
+```sql
+select order_code, kind, status, error, created_at
+from email_log order by created_at desc limit 20;
+```
+
+#### 7 · Opcionales
+
+**DMARC** (mejora la entrega). En Cloudflare, un `TXT` más:
+
+```
+Nombre: _dmarc
+Valor:  v=DMARC1; p=none; rua=mailto:elgmaildelclub@gmail.com
+```
+
+`p=none` sólo observa, no bloquea. Es el modo seguro para empezar.
+
+**Que el dominio lleve a la tienda.** Como no sirve la página, entrar a
+`clubatleticomontegrande.com.ar` no muestra nada. Si querés, en Cloudflare →
+**Rules → Redirect Rules** podés mandarlo a la URL de Vercel. Es opcional y no
+afecta a los mails.
+
+### Datos del club en los mails
+
+Editás `shared/domain/club.ts` y deployás:
+
+```ts
+export const CLUB: ClubInfo = {
+  name: 'Club Atlético Monte Grande',
+  shortName: 'CAMG',
+  paymentAlias: '',      // ← alias de transferencia
+  pickupAddress: '',     // ← dónde se retira
+  pickupHours: '',       // ← días y horarios
+  contactPhone: '',      // ← WhatsApp del club
+  ...
+};
+```
+
+Un campo vacío **no rompe nada**: el mail omite ese recuadro entero en vez de
+mostrar una etiqueta sin valor. `npm run email:test` avisa cuáles faltan antes
+de enviar.
+
+---
+
 ## Después, para el día a día
 
 | Necesito… | Comando / lugar |
@@ -150,6 +342,7 @@ Con la URL que te da Vercel:
 | Agregar un producto nuevo | Panel → Productos → *+ Nuevo producto* |
 | Recargar el catálogo del manual | `npm run db:seed` (no pisa las promos apagadas) |
 | Ver qué hay cargado | `npm run db:check` |
+| Cambiar el estado de un pedido (manda el mail) | Panel → Pedidos → columna *Estado* |
 
 Cambiar precios o promos desde el panel **no requiere redeploy**: los pedidos ya
 generados conservan los importes con los que se cerraron.

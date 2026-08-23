@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { Product } from '@shared/domain/product';
+import { useAdminAction } from '@/hooks/useAdminAction';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
-import { errorMessage } from '@/services/apiError';
 import { catalogService } from '@/services/catalogService';
 import { Alert, Button, Modal, Spinner } from '@/ui';
 import { ProductForm } from './ProductForm';
@@ -24,9 +24,7 @@ export function ProductsPanel() {
   const { data: products, error, isLoading, reload, set } = useAsyncResource(loadProducts, NO_PRODUCTS);
 
   const [dialog, setDialog] = useState<Dialog>(CLOSED);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
-  const [actionError, setActionError] = useState('');
+  const { busyId, notice, error: actionError, run, notify } = useAdminAction();
 
   const upsert = (saved: Product) =>
     set((current) => {
@@ -35,30 +33,18 @@ export function ProductsPanel() {
       return [...next].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
     });
 
-  async function runAction(product: Product, action: () => Promise<void>, message: string) {
-    setActionError('');
-    setNotice('');
-    setBusyId(product.id);
-    try {
-      await action();
-      setNotice(message);
-    } catch (caught) {
-      setActionError(errorMessage(caught));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   const toggleActive = (product: Product) =>
-    runAction(
-      product,
+    run(
+      product.id,
       async () => upsert(await catalogService.update(product.id, { isActive: !product.isActive })),
-      product.isActive ? `"${product.name}" ya no se muestra en el catálogo.` : `"${product.name}" está publicado.`,
+      product.isActive
+        ? `"${product.name}" ya no se muestra en el catálogo.`
+        : `"${product.name}" está publicado.`,
     );
 
   const confirmDelete = (product: Product) =>
-    runAction(
-      product,
+    run(
+      product.id,
       async () => {
         await catalogService.remove(product.id);
         set((current) => current.filter((item) => item.id !== product.id));
@@ -115,8 +101,7 @@ export function ProductsPanel() {
             onSaved={(saved, mode) => {
               upsert(saved);
               setDialog(CLOSED);
-              setActionError('');
-              setNotice(mode === 'created' ? `"${saved.name}" se creó.` : `"${saved.name}" se actualizó.`);
+              notify(mode === 'created' ? `"${saved.name}" se creó.` : `"${saved.name}" se actualizó.`);
             }}
           />
         )}

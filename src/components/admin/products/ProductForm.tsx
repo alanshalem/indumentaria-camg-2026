@@ -8,8 +8,9 @@ import {
 } from '@shared/domain/product.js';
 import { SIZE_CHARTS, SIZE_CHART_IDS, type SizeChartId } from '@shared/domain/sizeCharts.js';
 import { productInputSchema } from '@shared/schemas/product.schema.js';
-import { ApiError, errorMessage } from '@/services/apiError';
+import { errorMessage } from '@/services/apiError';
 import { catalogService } from '@/services/catalogService';
+import { fieldErrorsFromApi, fieldErrorsFromZod } from '@/utils/formErrors';
 import { Alert, Button, Field, SelectField } from '@/ui';
 import { ColorEditor } from './ColorEditor';
 import { ImagePicker } from './ImagePicker';
@@ -129,10 +130,7 @@ export function ProductForm({ product, onSaved, onCancel }: Props) {
 
     const parsed = productInputSchema.safeParse(candidate);
     if (!parsed.success) {
-      const errors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        errors[issue.path.map(String).join('.') || '_'] ??= issue.message;
-      }
+      const errors = fieldErrorsFromZod(parsed.error);
       setFieldErrors(errors);
       setFormError(errors['_'] ?? 'Revisá los campos marcados.');
       return;
@@ -145,7 +143,7 @@ export function ProductForm({ product, onSaved, onCancel }: Props) {
         : await catalogService.create(parsed.data);
       onSaved(saved, isEditing ? 'updated' : 'created');
     } catch (caught) {
-      if (caught instanceof ApiError) setFieldErrors(caught.fields);
+      setFieldErrors(fieldErrorsFromApi(caught));
       setFormError(errorMessage(caught, 'No se pudo guardar el producto.'));
     } finally {
       setIsSaving(false);

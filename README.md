@@ -78,10 +78,27 @@ Base: `/api`. Todas las respuestas usan el mismo sobre: `{ data }` en el éxito,
 | `POST` | `/uploads/product-image` | **admin** | Sube una imagen (base64, ≤ 4 MB) a Supabase Storage |
 | `GET` | `/orders` | **admin** | Lista pedidos con filtros de estado, texto y rango de fechas |
 | `POST` | `/orders` | público | Checkout del socio |
+| `GET` | `/orders/:code?t=…` | **firmado** | Seguimiento del pedido. Sin `t` válido devuelve 404 |
 | `PATCH` | `/orders/:code` | **admin** | Cambia el estado del pedido |
 
 Las rutas marcadas **admin** pasan por el decorator `adminOnly`, que verifica la
 firma del JWT antes de ejecutar el handler.
+
+### El link de seguimiento
+
+El socio no tiene cuenta, pero sí una prueba de identidad: el mail. Cada aviso
+lleva un botón a `/pedido/:code?t=<firma>`, donde la firma es
+`HMAC-SHA256(derivar(ADMIN_TOKEN_SECRET), code)`. La firma no autentica a una
+persona: **autoriza el acceso a un pedido**.
+
+- **Determinística**: los tres mails llevan el mismo link y uno viejo sigue
+  andando. Cero tablas, cero sesiones, cero expiración que explicarle a nadie.
+- **Clave derivada**, no el secreto de admin: un link filtrado no acerca a nadie
+  a las sesiones del panel.
+- **404, no 401**, ante un token inválido: con el mismo mensaje que un código
+  inexistente, así la respuesta no confirma qué pedidos existen.
+- La respuesta es un `PublicOrder`: **sin teléfono ni mail**, porque un link se
+  reenvía.
 
 ---
 
@@ -133,6 +150,7 @@ Dos consecuencias concretas:
 | El cliente enviaba `unitPrice` y `total` al crear el pedido | El servidor resuelve el tier del talle, busca el precio en la base y recalcula las promos |
 | La anon key en el bundle permitía leer la tabla `orders` completa (nombres y montos de todos los socios) | RLS activado sin policies: anon y authenticated no tienen acceso. El único camino es la API con `service_role` |
 | Sin límite de intentos de login | Ventana deslizante: 8 intentos cada 5 minutos por IP |
+| Para saber en qué andaba su pedido, el socio tenía que escribir al club | Link firmado por HMAC en cada mail. Sin login, sin exponer la tabla y sin devolver datos de contacto |
 
 El CAPTCHA del login sigue siendo client-side y **no** es una defensa: es
 fricción contra bots triviales. La protección real es el rate limit del servidor.

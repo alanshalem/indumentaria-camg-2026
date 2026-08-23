@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { formatPrice } from '@shared/domain/money';
 import {
+  isOpenOrder,
   ORDER_STATUS_LABELS,
   ORDER_STATUSES,
   type Order,
@@ -47,7 +48,7 @@ export function OrdersPanel() {
   const stats = useMemo(
     () => ({
       total: orders.length,
-      pending: orders.filter((order) => order.status === 'pending').length,
+      open: orders.filter((order) => isOpenOrder(order.status)).length,
       revenue: orders.reduce((sum, order) => sum + order.total, 0),
       discounts: orders.reduce((sum, order) => sum + (order.subtotal - order.total), 0),
     }),
@@ -86,8 +87,8 @@ export function OrdersPanel() {
           <strong className={styles.statVal}>{stats.total}</strong>
         </div>
         <div className={styles.statCard}>
-          <span className={styles.statLabel}>Pendientes</span>
-          <strong className={styles.statVal}>{stats.pending}</strong>
+          <span className={styles.statLabel}>Sin entregar</span>
+          <strong className={styles.statVal}>{stats.open}</strong>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total facturado</span>

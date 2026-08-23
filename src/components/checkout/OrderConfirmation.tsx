@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { countOrderUnits, customerFullName, type Order } from '@shared/domain/order';
-import { formatPhone } from '@shared/domain/phone';
 import { formatDateTime } from '@/utils/formatDate';
 import { Button } from '@/ui';
 import { CartSummary } from '@/components/cart/CartSummary';
@@ -26,8 +25,7 @@ export function OrderConfirmation({ order, onClose }: { order: Order; onClose: (
       <div className={styles.icon}>✓</div>
       <h3 className={styles.title}>¡Pedido generado!</h3>
       <p className={styles.sub}>
-        Guardá este código. El club te va a escribir al {formatPhone(order.phone)} para coordinar el
-        pago y el retiro.
+        Te mandamos el detalle por mail. Guardá el código: te lo van a pedir al retirar.
       </p>
 
       <div className={styles.codeBox}>
@@ -47,6 +45,14 @@ export function OrderConfirmation({ order, onClose }: { order: Order; onClose: (
           <span>Fecha</span>
           <strong>{formatDateTime(order.timestamp)}</strong>
         </li>
+        {/* Ultima chance de que el socio note un mail mal escrito: si no le
+            llega nada, no tiene cuenta ni forma de recuperar el pedido. */}
+        {order.email && (
+          <li>
+            <span>Te escribimos a</span>
+            <strong>{order.email}</strong>
+          </li>
+        )}
         <li>
           <span>Items</span>
           <strong>{countOrderUnits(order.items)}</strong>

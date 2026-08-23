@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computeSubtotal, countOrderUnits, describeItem, nextStatus } from '../shared/domain/order';
+import {
+  computeSubtotal,
+  countOrderUnits,
+  describeItem,
+  isOpenOrder,
+  ORDER_STATUSES,
+} from '../shared/domain/order';
 import { generateOrderCode, isOrderCode } from '../shared/domain/orderCode';
 import { formatPrice, isValidPrice } from '../shared/domain/money';
 import { priceBands, resolveProductId, sizeRangeLabel, slugify } from '../shared/domain/product';
@@ -51,9 +57,9 @@ describe('order', () => {
     expect(countOrderUnits(items)).toBe(5);
   });
 
-  it('alterna el estado', () => {
-    expect(nextStatus('pending')).toBe('delivered');
-    expect(nextStatus('delivered')).toBe('pending');
+  it('sólo "entregado" cierra el pedido', () => {
+    expect(ORDER_STATUSES.filter(isOpenOrder)).toEqual(['pending', 'paid', 'ready']);
+    expect(isOpenOrder('delivered')).toBe(false);
   });
 });
 

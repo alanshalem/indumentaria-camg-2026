@@ -1,7 +1,3 @@
-import type { Order } from '../domain/order.js';
-import type { Product } from '../domain/product.js';
-import type { PromotionDefinition } from '../domain/promotions.js';
-
 export const API_BASE = '/api';
 
 /**
@@ -33,6 +29,17 @@ export const ROUTES = {
   },
 } as const;
 
+/**
+ * Páginas públicas que se linkean desde afuera de la app (mails).
+ * Viven acá para que el servidor arme la URL y el router del cliente la
+ * matchee con la misma definición.
+ */
+export const PAGES = {
+  orderStatusPattern: '/pedido/:code',
+  orderStatus: (code: string, token: string) =>
+    `/pedido/${encodeURIComponent(code)}?t=${encodeURIComponent(token)}`,
+} as const;
+
 export interface LoginResponse {
   token: string;
   /** Epoch ms de expiración; el cliente cierra sesión sin llamar al servidor. */
@@ -47,10 +54,3 @@ export interface SessionResponse {
 export interface UploadResponse {
   url: string;
 }
-
-export type ProductListResponse = Product[];
-export type ProductResponse = Product;
-export type PromotionListResponse = PromotionDefinition[];
-export type PromotionResponse = PromotionDefinition;
-export type OrderListResponse = Order[];
-export type OrderResponse = Order;

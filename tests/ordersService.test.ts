@@ -1,3 +1,4 @@
+import './support/serverEnv';
 import { describe, expect, it } from 'vitest';
 import type { Order, OrderStatus } from '../shared/domain/order';
 import type { Product, ProductInput } from '../shared/domain/product';
@@ -5,8 +6,10 @@ import type { PromotionDefinition } from '../shared/domain/promotions';
 import type { OrderRepository } from '../server/infra/orderRepository';
 import type { ProductRepository } from '../server/infra/productRepository';
 import type { PromotionRepository } from '../server/infra/promotionRepository';
+import type { EmailsService } from '../server/modules/emails/emails.service';
 import { createOrdersService } from '../server/modules/orders/orders.service';
 import { HttpError } from '../server/http/errors';
+import { signOrderToken } from '../server/security/orderToken';
 
 const product = (overrides: Partial<Product> = {}): Product => ({
   id: 'campera-canguro',
@@ -30,6 +33,7 @@ const CUSTOMER = {
   customerName: 'Ana',
   customerLastName: 'Pérez',
   phone: '1123456789',
+  email: 'ana@ejemplo.com',
 };
 
 /** Doble en memoria: el servicio no sabe si detrás hay Postgres o un Map. */
@@ -73,10 +77,21 @@ const fakePromotions = (definitions: PromotionDefinition[] = []): PromotionRepos
   },
 });
 
+/** Espia de mails: registra a que estado se le aviso, sin tocar la red. */
+function fakeEmails(): EmailsService & { notified: OrderStatus[] } {
+  const notified: OrderStatus[] = [];
+  return {
+    notified,
+    notifyStatus: async (order) => {
+      notified.push(order.status);
+    },
+  };
+}
+
 describe('ordersService.create', () => {
   it('cobra el precio del tier que corresponde al talle', async () => {
     const orders = fakeOrders();
-    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions());
+    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
 
     const order = await service.create({
       ...CUSTOMER,
@@ -113,6 +128,7 @@ describe('ordersService.create', () => {
           sortOrder: 20,
         },
       ]),
+      fakeEmails(),
     );
 
     const order = await service.create({
@@ -129,7 +145,7 @@ describe('ordersService.create', () => {
   });
 
   it('rechaza un talle que el producto no tiene', async () => {
-    const service = createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions());
+    const service = createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions(), fakeEmails());
 
     await expect(
       service.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: '4', quantity: 1 }] }),
@@ -137,7 +153,7 @@ describe('ordersService.create', () => {
   });
 
   it('rechaza un producto inexistente', async () => {
-    const service = createOrdersService(fakeOrders(), fakeProducts([]), fakePromotions());
+    const service = createOrdersService(fakeOrders(), fakeProducts([]), fakePromotions(), fakeEmails());
 
     await expect(
       service.create({ ...CUSTOMER, items: [{ productId: 'fantasma', size: 'M', quantity: 1 }] }),
@@ -149,6 +165,7 @@ describe('ordersService.create', () => {
       fakeOrders(),
       fakeProducts([product({ isActive: false })]),
       fakePromotions(),
+      fakeEmails(),
     );
 
     await expect(
@@ -162,7 +179,7 @@ describe('ordersService.create', () => {
       name: 'Remera',
       colors: [{ name: 'Roja', hex: '#DC143C', imageUrl: null }],
     });
-    const service = createOrdersService(fakeOrders(), fakeProducts([remera]), fakePromotions());
+    const service = createOrdersService(fakeOrders(), fakeProducts([remera]), fakePromotions(), fakeEmails());
 
     await expect(
       service.create({ ...CUSTOMER, items: [{ productId: 'remera-algodon', size: 'M', quantity: 1 }] }),
@@ -177,7 +194,7 @@ describe('ordersService.create', () => {
   });
 
   it('descarta el color en productos que no tienen variantes', async () => {
-    const service = createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions());
+    const service = createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions(), fakeEmails());
 
     const order = await service.create({
       ...CUSTOMER,
@@ -197,7 +214,7 @@ describe('ordersService.create', () => {
       return originalCreate(order);
     };
 
-    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions());
+    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
     const order = await service.create({
       ...CUSTOMER,
       items: [{ productId: 'campera-canguro', size: 'S', quantity: 1 }],
@@ -205,5 +222,110 @@ describe('ordersService.create', () => {
 
     expect(attempts).toBe(2);
     expect(order.code).toMatch(/^CAMG-\d{4}-/);
+  });
+
+  it('avisa por mail al crear el pedido', async () => {
+    const emails = fakeEmails();
+    const service = createOrdersService(
+      fakeOrders(),
+      fakeProducts([product()]),
+      fakePromotions(),
+      emails,
+    );
+
+    await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
+    });
+
+    expect(emails.notified).toEqual(['pending']);
+  });
+});
+
+describe('ordersService.updateStatus', () => {
+  it('notifica cada cambio de estado', async () => {
+    const orders = fakeOrders();
+    const emails = fakeEmails();
+    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), emails);
+
+    const order = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
+    });
+
+    await service.updateStatus(order.code, 'paid');
+    await service.updateStatus(order.code, 'ready');
+    await service.updateStatus(order.code, 'delivered');
+
+    // 'delivered' tambien se notifica: es el servicio de mails el que decide
+    // que ese estado no tiene plantilla y no manda nada.
+    expect(emails.notified).toEqual(['pending', 'paid', 'ready', 'delivered']);
+  });
+});
+
+describe('ordersService.findPublic', () => {
+  const service = () =>
+    createOrdersService(fakeOrders(), fakeProducts([product()]), fakePromotions(), fakeEmails());
+
+  const newOrder = async (orders: ReturnType<typeof createOrdersService>) =>
+    orders.create({ ...CUSTOMER, items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }] });
+
+  it('devuelve el pedido cuando el token es el del link del mail', async () => {
+    const orders = service();
+    const created = await newOrder(orders);
+
+    const found = await orders.findPublic(created.code, signOrderToken(created.code));
+
+    expect(found.code).toBe(created.code);
+    expect(found.status).toBe('pending');
+    expect(found.items).toHaveLength(1);
+    expect(found.total).toBe(created.total);
+  });
+
+  it('no expone telefono ni mail: el link se puede reenviar', async () => {
+    const orders = service();
+    const created = await newOrder(orders);
+
+    const found = await orders.findPublic(created.code, signOrderToken(created.code));
+
+    expect(found).not.toHaveProperty('phone');
+    expect(found).not.toHaveProperty('email');
+    expect(JSON.stringify(found)).not.toContain(CUSTOMER.phone);
+  });
+
+  it('rechaza un token invalido', async () => {
+    const orders = service();
+    const created = await newOrder(orders);
+
+    await expect(orders.findPublic(created.code, 'firma-inventada')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(orders.findPublic(created.code, '')).rejects.toBeInstanceOf(HttpError);
+  });
+
+  it('rechaza el token de otro pedido', async () => {
+    const orders = service();
+    const created = await newOrder(orders);
+
+    await expect(
+      orders.findPublic(created.code, signOrderToken('CAMG-2026-OTROO')),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('un codigo inexistente y un token invalido fallan igual', async () => {
+    const orders = service();
+    const created = await newOrder(orders);
+    const ghost = 'CAMG-2026-FANTA';
+
+    // Mismo code y mismo mensaje en los dos casos: la respuesta no revela si
+    // ese pedido existe, asi que el codigo no se puede enumerar desde afuera.
+    const noSuchOrder = await orders.findPublic(ghost, signOrderToken(ghost)).catch((e) => e);
+    const badToken = await orders.findPublic(created.code, 'firma-inventada').catch((e) => e);
+
+    expect(noSuchOrder).toBeInstanceOf(HttpError);
+    expect(badToken).toBeInstanceOf(HttpError);
+    expect(noSuchOrder.code).toBe('NOT_FOUND');
+    expect(badToken.code).toBe(noSuchOrder.code);
+    expect(badToken.message).toBe(noSuchOrder.message);
   });
 });

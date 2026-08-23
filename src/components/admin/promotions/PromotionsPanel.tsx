@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import type { PromotionDefinition } from '@shared/domain/promotions';
 import { PROMOTION_KIND_LABELS } from '@shared/domain/promotions';
+import { useAdminAction } from '@/hooks/useAdminAction';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
-import { errorMessage } from '@/services/apiError';
 import { promotionService } from '@/services/promotionService';
 import { Alert, Button, Spinner } from '@/ui';
 import { PromotionCard } from './PromotionCard';
@@ -19,26 +19,19 @@ export function PromotionsPanel() {
   const load = useCallback(() => promotionService.list({ includeInactive: true }), []);
   const { data: promotions, error, isLoading, reload, set } = useAsyncResource(load, NO_PROMOTIONS);
 
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
-  const [actionError, setActionError] = useState('');
+  const { busyId, notice, error: actionError, run } = useAdminAction();
 
   const save = useCallback(
-    async (id: string, patch: Parameters<typeof promotionService.update>[1], message: string) => {
-      setActionError('');
-      setNotice('');
-      setBusyId(id);
-      try {
-        const saved = await promotionService.update(id, patch);
-        set((current) => current.map((promotion) => (promotion.id === id ? saved : promotion)));
-        setNotice(message);
-      } catch (caught) {
-        setActionError(errorMessage(caught));
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [set],
+    (id: string, patch: Parameters<typeof promotionService.update>[1], message: string) =>
+      run(
+        id,
+        async () => {
+          const saved = await promotionService.update(id, patch);
+          set((current) => current.map((promotion) => (promotion.id === id ? saved : promotion)));
+        },
+        message,
+      ),
+    [run, set],
   );
 
   return (

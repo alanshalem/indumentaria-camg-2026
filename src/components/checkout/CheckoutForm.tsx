@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import type { Order } from '@shared/domain/order';
 import type { PromotionOutcome } from '@shared/domain/promotions';
+import { suggestEmailFix } from '@shared/domain/emailSuggestion';
 import { createOrderSchema } from '@shared/schemas/order.schema';
-import { ApiError, errorMessage } from '@/services/apiError';
+import { errorMessage } from '@/services/apiError';
 import { lastOrderStorage } from '@/services/lastOrderStorage';
 import { orderService } from '@/services/orderService';
 import { toOrderItems, useCartStore } from '@/store/cartStore';
+import { fieldErrorsFromApi, fieldErrorsFromZod } from '@/utils/formErrors';
 import { Alert, Button, Field } from '@/ui';
 import { CartSummary } from '@/components/cart/CartSummary';
 import styles from './CheckoutForm.module.css';
@@ -16,14 +18,6 @@ interface Props {
   onComplete: (order: Order) => void;
 }
 
-const collectIssues = (issues: readonly { path: PropertyKey[]; message: string }[]) => {
-  const errors: Record<string, string> = {};
-  for (const issue of issues) {
-    errors[issue.path.map(String).join('.') || '_'] ??= issue.message;
-  }
-  return errors;
-};
-
 export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
   const lines = useCartStore((state) => state.lines);
   const clear = useCartStore((state) => state.clear);
@@ -32,9 +26,12 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
   const [customerLastName, setCustomerLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [emailConfirm, setEmailConfirm] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const suggestion = useMemo(() => suggestEmailFix(email), [email]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -51,9 +48,17 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
     });
 
     if (!parsed.success) {
-      const errors = collectIssues(parsed.error.issues);
+      const errors = fieldErrorsFromZod(parsed.error);
       setFieldErrors(errors);
       setFormError(errors['_'] ?? errors['items'] ?? 'Revisá los datos del formulario.');
+      return;
+    }
+
+    // El socio no tiene cuenta: si el mail sale mal no hay forma de recuperar el
+    // pedido, se entera cuando no le llega nada. Por eso se pide dos veces.
+    if (parsed.data.email !== emailConfirm.trim().toLowerCase()) {
+      setFieldErrors({ emailConfirm: 'Los dos emails no coinciden.' });
+      setFormError('Revisá que el email esté repetido igual en los dos campos.');
       return;
     }
 
@@ -66,7 +71,7 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
       clear();
       onComplete(order);
     } catch (caught) {
-      if (caught instanceof ApiError) setFieldErrors(caught.fields);
+      setFieldErrors(fieldErrorsFromApi(caught));
       setFormError(errorMessage(caught, 'No se pudo generar el pedido. Reintentá en unos segundos.'));
     } finally {
       setIsSubmitting(false);
@@ -121,14 +126,46 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
       />
 
       <Field
-        label="Email (opcional)"
+        label="Email *"
         type="email"
+        inputMode="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         error={fieldErrors['email']}
         placeholder="socio@ejemplo.com"
         autoComplete="email"
         maxLength={120}
+        hint="Te mandamos el código, cómo pagar y el aviso cuando esté listo para retirar."
+        required
+      />
+
+      {/* Atrapa el typo que el campo repetido no ve: pegar dos veces el mismo
+          dominio mal escrito. */}
+      {suggestion && (
+        <button
+          type="button"
+          className={styles.suggestion}
+          onClick={() => {
+            setEmail(suggestion);
+            setEmailConfirm(suggestion);
+          }}
+        >
+          ¿Quisiste decir <strong>{suggestion}</strong>?
+        </button>
+      )}
+
+      <Field
+        label="Repetí el email *"
+        type="email"
+        inputMode="email"
+        value={emailConfirm}
+        onChange={(event) => setEmailConfirm(event.target.value)}
+        error={fieldErrors['emailConfirm']}
+        placeholder="socio@ejemplo.com"
+        autoComplete="off"
+        maxLength={120}
+        hint="Si te equivocás no hay forma de avisarte: revisalo bien."
+        required
       />
 
       <Alert>{formError}</Alert>
@@ -138,8 +175,8 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
       </Button>
 
       <p className={styles.disclaimer}>
-        La tienda genera el pedido y te da un código. Después el club te contacta para coordinar el
-        pago y el retiro en la sede.
+        Te llega un mail con el código y los datos para pagar. Cuando se acredite el pago y cuando
+        el pedido esté en la sede, te avisamos por el mismo medio.
       </p>
     </form>
   );

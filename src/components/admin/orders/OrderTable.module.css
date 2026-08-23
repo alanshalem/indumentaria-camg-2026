@@ -164,3 +164,60 @@
   font-weight: 700;
   font-size: 0.9rem;
 }
+
+
+/* --- Selector de estado ------------------------------------------------------ */
+
+.statusSelect {
+  width: auto;
+  min-width: 152px;
+  padding: 6px 28px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  /* La flecha nativa no se puede colorear: se dibuja una. */
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%239a9a9a' stroke-width='1.8'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.statusSelect:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* Un color por etapa: se lee el estado del lote de un vistazo. */
+.statusSelect.pending {
+  background-color: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.statusSelect.paid {
+  background-color: rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #93c5fd;
+}
+
+.statusSelect.ready {
+  background-color: rgba(139, 92, 246, 0.16);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
+}
+
+.statusSelect.delivered {
+  background-color: rgba(35, 165, 90, 0.16);
+  border-color: rgba(35, 165, 90, 0.5);
+  color: #7ee2a8;
+}
+
+/* El desplegable abierto lo pinta el sistema: las opciones necesitan contraste. */
+.statusSelect option {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+}

@@ -9,6 +9,7 @@ describe('createOrderSchema', () => {
     customerName: 'Ana',
     customerLastName: 'Pérez',
     phone: '11 2345-6789',
+    email: 'ana@ejemplo.com',
     items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
   };
 
@@ -27,9 +28,14 @@ describe('createOrderSchema', () => {
     expect(createOrderSchema.safeParse({ ...valid, phone: '123' }).success).toBe(false);
   });
 
-  it('trata el email vacío como ausente', () => {
-    expect(createOrderSchema.parse({ ...valid, email: '' }).email).toBeNull();
-    expect(createOrderSchema.parse(valid).email).toBeNull();
+  it('exige el email: es el canal por el que se avisa el estado del pedido', () => {
+    const { email: _sinMail, ...faltaEmail } = valid;
+    expect(createOrderSchema.safeParse(faltaEmail).success).toBe(false);
+    expect(createOrderSchema.safeParse({ ...valid, email: '' }).success).toBe(false);
+  });
+
+  it('normaliza el email antes de validarlo', () => {
+    // Pegar un mail con un espacio al final es lo mas comun del mundo.
     expect(createOrderSchema.parse({ ...valid, email: '  Socio@Club.COM ' }).email).toBe(
       'socio@club.com',
     );

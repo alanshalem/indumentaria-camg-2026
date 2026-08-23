@@ -1,0 +1,118 @@
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.step {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 22px;
+  position: relative;
+}
+
+/* La línea que une los pasos. El último no la lleva. */
+.step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.step:last-child {
+  padding-bottom: 0;
+}
+
+.marker {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  z-index: 1;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 5px;
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.detail {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-muted);
+}
+
+.badge {
+  font-style: normal;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--color-red);
+  color: var(--color-white);
+}
+
+/* --- Estados ---------------------------------------------------------------- */
+
+.done .marker {
+  border-color: rgba(35, 165, 90, 0.6);
+  background: rgba(35, 165, 90, 0.16);
+  color: #7ee2a8;
+}
+
+.done .label {
+  color: var(--color-text);
+}
+
+.done:not(:last-child)::before {
+  background: rgba(35, 165, 90, 0.4);
+}
+
+.current .marker {
+  border-color: var(--color-red);
+  background: var(--color-red);
+  color: var(--color-white);
+  box-shadow: 0 0 0 4px rgba(220, 20, 60, 0.18);
+}
+
+.current .label {
+  color: var(--color-white);
+}
+
+.current .detail {
+  color: var(--color-text);
+}
+
+.todo .marker {
+  opacity: 0.6;
+}
+
+.todo .detail {
+  opacity: 0.7;
+}

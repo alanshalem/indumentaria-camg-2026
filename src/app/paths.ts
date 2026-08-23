@@ -1,3 +1,5 @@
+import { PAGES } from '@shared/api/contracts';
+
 /**
  * Rutas del cliente en un solo lugar. Una URL escrita a mano en un `<Link>` es
  * un enlace roto esperando a que alguien renombre la ruta.
@@ -8,6 +10,8 @@ export const PATHS = {
   login: '/login',
   admin: '/admin',
   product: '/producto/:id',
+  /** Definido en `shared`: el mail arma esta misma URL del otro lado. */
+  orderStatus: PAGES.orderStatusPattern,
 } as const;
 
 export const productPath = (id: string): string => `/producto/${encodeURIComponent(id)}`;
