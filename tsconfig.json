@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    // ES2023 es correcto: TypeScript 5.9 trae lib.es2023.d.ts y tanto Node 24
+    // como los navegadores que targeteamos ya la implementan. El schema de
+    // tsconfig que empaqueta webhint corta en ES2022 y la marca como invalida:
+    // por eso `typescript-config/is-valid` esta apagada en .hintrc.
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
