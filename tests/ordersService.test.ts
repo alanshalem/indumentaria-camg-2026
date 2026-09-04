@@ -72,12 +72,12 @@ function fakeOrders(): OrderRepository & { saved: Order[] } {
   };
 }
 
-const fakePromotions = (definitions: PromotionDefinition[] = []): PromotionRepository => ({
-  list: async () => definitions,
-  update: async () => {
+const fakePromotions = (definitions: PromotionDefinition[] = []): PromotionRepository => {
+  const unused = async () => {
     throw new Error('no usado');
-  },
-});
+  };
+  return { list: async () => definitions, create: unused, update: unused, remove: unused };
+};
 
 /** Espia de mails: registra a que estado se le aviso, sin tocar la red. */
 function fakeEmails(missed: EmailKind[] = []): EmailsService & { notified: OrderStatus[] } {
@@ -129,7 +129,7 @@ describe('ordersService.create', () => {
           kind: 'sameProductDifferentSize',
           label: 'Promo familia CAMG',
           description: '',
-          config: { percentOff: 10 },
+          config: { percentOff: 10, productIds: ['campera-canguro'] },
           isActive: true,
           sortOrder: 20,
         },

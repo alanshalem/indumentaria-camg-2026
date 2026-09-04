@@ -38,7 +38,12 @@ const FAMILIA: PromotionDefinition = {
   kind: 'sameProductDifferentSize',
   label: 'Promo familia CAMG',
   description: '',
-  config: { percentOff: 10 },
+  // La promo sólo alcanza indumentaria: sin esta lista descontaba tambien en
+  // toalla, cuello y medias, que es lo que el club no queria.
+  config: {
+    percentOff: 10,
+    productIds: ['buzo-medio-cierre', 'pantalon-con-cierre', 'remera-algodon'],
+  },
   isActive: true,
   sortOrder: 20,
 };
@@ -335,6 +340,50 @@ describe('promos a un producto de distancia', () => {
 
   it('una promo apagada no se sugiere', () => {
     const nearby = nearbyPromotions([buzo('M', 'large')], [{ ...COMBO, isActive: false }], priceOf);
+
+    expect(nearby).toEqual([]);
+  });
+});
+
+describe('alcance de la promo familia', () => {
+  const accesorio = (size: string) => unit('toalla-camg', size, 'large', 1000);
+
+  it('no descuenta en un producto que no esta en la lista', () => {
+    const { discounts, total } = evaluatePromotions(
+      [accesorio('Único'), unit('toalla-camg', 'Otro', 'large', 1000)],
+      [FAMILIA],
+    );
+
+    expect(discounts).toEqual([]);
+    expect(total).toBe(2000);
+  });
+
+  it('sigue descontando en los productos que si estan', () => {
+    const { discounts } = evaluatePromotions([remera('M', 'large'), remera('12', 'small')], [FAMILIA]);
+
+    expect(discounts).toHaveLength(1);
+    // 10% sobre la remera chica, que es la mas barata del par.
+    expect(discounts[0]?.amount).toBe(Math.round(PRICES.remera.small * 0.1));
+  });
+
+  it('una lista vacia no descuenta nada: es explicito, no un catch-all', () => {
+    const sinAlcance = { ...FAMILIA, config: { percentOff: 10, productIds: [] } };
+    const { discounts } = evaluatePromotions([remera('M', 'large'), remera('12', 'small')], [sinAlcance]);
+
+    expect(discounts).toEqual([]);
+  });
+
+  it('un config viejo sin productIds tampoco descuenta', () => {
+    // Regresion: antes `{percentOff: 10}` aplicaba a todo el catalogo.
+    const viejo = { ...FAMILIA, config: { percentOff: 10 } };
+    const { discounts } = evaluatePromotions([remera('M', 'large'), remera('12', 'small')], [viejo]);
+
+    expect(discounts).toEqual([]);
+  });
+
+  it('tampoco lo sugiere el aviso del carrito', () => {
+    const priceOf = () => PRICES.remera.large;
+    const nearby = nearbyPromotions([accesorio('Único')], [FAMILIA], priceOf);
 
     expect(nearby).toEqual([]);
   });

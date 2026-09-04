@@ -4,8 +4,17 @@ import { PROMOTION_KINDS } from '../domain/promotions.js';
 
 const price = z.number().int().min(0).max(MAX_PRICE_ARS);
 
+const productId = z.string().trim().min(1);
+
+const promotionId = z
+  .string()
+  .trim()
+  .min(2)
+  .max(64)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'El identificador solo admite minúsculas, números y guiones');
+
 export const comboConfigSchema = z.object({
-  productIds: z.tuple([z.string().trim().min(1), z.string().trim().min(1)]),
+  productIds: z.tuple([productId, productId]),
   bundlePriceLarge: price,
   bundlePriceSmall: price,
 });
@@ -16,6 +25,9 @@ export const sameProductConfigSchema = z.object({
     .int('El descuento debe ser un porcentaje entero')
     .min(1, 'El descuento debe ser mayor a 0')
     .max(90, 'El descuento no puede superar el 90%'),
+  // Explícito y obligatorio: una promo sin productos elegidos no descuenta
+  // nada, y es preferible a una que descuenta en todo el catálogo por omisión.
+  productIds: z.array(productId).min(1, 'Elegí al menos un producto').max(50),
 });
 
 /**
@@ -39,6 +51,23 @@ export const promotionPatchSchema = z
 
 export const promotionKindSchema = z.enum(PROMOTION_KINDS);
 
+/**
+ * Alta de una promoción desde el panel.
+ *
+ * El `config` viaja como `unknown` y lo valida el servicio con el esquema que
+ * corresponde al `kind`: acá todavía no se sabe cuál de las dos formas es.
+ */
+export const promotionInputSchema = z.object({
+  id: promotionId.optional(),
+  kind: promotionKindSchema,
+  label: z.string().trim().min(2, 'Poné un nombre').max(80),
+  description: z.string().trim().max(200).default(''),
+  config: z.unknown(),
+  isActive: z.boolean().default(true),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+});
+
+export type PromotionInputDto = z.infer<typeof promotionInputSchema>;
 export type PromotionPatchDto = z.infer<typeof promotionPatchSchema>;
 export type ComboConfigDto = z.infer<typeof comboConfigSchema>;
 export type SameProductConfigDto = z.infer<typeof sameProductConfigSchema>;

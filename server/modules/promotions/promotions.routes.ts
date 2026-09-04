@@ -1,7 +1,10 @@
 import { ROUTES } from '../../../shared/api/contracts.js';
-import { promotionPatchSchema } from '../../../shared/schemas/promotion.schema.js';
+import {
+  promotionInputSchema,
+  promotionPatchSchema,
+} from '../../../shared/schemas/promotion.schema.js';
 import { Router } from '../../http/router.js';
-import { ok } from '../../http/responses.js';
+import { created, noContent, ok } from '../../http/responses.js';
 import { parseOrThrow } from '../../http/validate.js';
 import { adminOnly, isAdminRequest } from '../../security/adminGuard.js';
 import { promotionsService } from './promotions.service.js';
@@ -14,6 +17,20 @@ export const promotionRoutes = new Router()
     const includeInactive = wantsInactive && isAdminRequest(request);
     return ok(await promotionsService.list(includeInactive));
   })
+  .post(
+    ROUTES.promotions.collection,
+    adminOnly(async (request) => {
+      const input = parseOrThrow(promotionInputSchema, request.body, 'No se pudo crear la promoción');
+      return created(await promotionsService.create(input));
+    }),
+  )
+  .delete(
+    ROUTES.promotions.pattern,
+    adminOnly(async (request) => {
+      await promotionsService.remove(request.params.id!);
+      return noContent();
+    }),
+  )
   .patch(
     ROUTES.promotions.pattern,
     adminOnly(async (request) => {

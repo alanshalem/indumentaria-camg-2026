@@ -42,6 +42,15 @@ export interface ComboConfig {
 /** Configuración de `sameProductDifferentSize`: % sobre la unidad más barata. */
 export interface SameProductConfig {
   percentOff: number;
+  /**
+   * A qué productos aplica. Una lista vacía no aplica a ninguno.
+   *
+   * Es explícita y no una categoría: el club quiere la promo en las cinco
+   * prendas de indumentaria y no en accesorios, y un producto nuevo no tiene
+   * por qué entrar solo. Sin esta lista la promo descontaba también toallas,
+   * cuellos y medias.
+   */
+  productIds: string[];
 }
 
 /** Una prenda concreta del carrito, ya con su precio resuelto por talle. */
@@ -160,8 +169,14 @@ const combo: PromotionRule = (units, definition) => {
 //  Regla: dos productos iguales de distinto talle → % sobre el más barato
 // ---------------------------------------------------------------------------
 
-const isSameProductConfig = (config: unknown): config is SameProductConfig =>
-  !!config && typeof (config as SameProductConfig).percentOff === 'number';
+const isSameProductConfig = (config: unknown): config is SameProductConfig => {
+  const candidate = config as SameProductConfig | null;
+  return (
+    !!candidate &&
+    typeof candidate.percentOff === 'number' &&
+    Array.isArray(candidate.productIds)
+  );
+};
 
 /**
  * Empareja unidades del mismo producto que tengan talles distintos.
@@ -172,13 +187,16 @@ const isSameProductConfig = (config: unknown): config is SameProductConfig =>
  */
 const sameProductDifferentSize: PromotionRule = (units, definition) => {
   if (!isSameProductConfig(definition.config)) return NOTHING;
-  const percentOff = definition.config.percentOff;
+  const { percentOff, productIds } = definition.config;
   if (percentOff <= 0 || percentOff >= 100) return NOTHING;
+  if (productIds.length === 0) return NOTHING;
+
+  const alcanzados = units.filter((unit) => productIds.includes(unit.productId));
 
   const discounts: AppliedPromotion[] = [];
   const consumed: PricedUnit[] = [];
 
-  for (const [, productUnits] of groupBy(units, (unit) => unit.productId)) {
+  for (const [, productUnits] of groupBy(alcanzados, (unit) => unit.productId)) {
     const bySize = [...groupBy(productUnits, (unit) => unit.size).values()].map((group) =>
       [...group].sort(byPriceAsc),
     );
@@ -389,9 +407,15 @@ export function nearbyPromotions(
     }
 
     if (definition.kind === 'sameProductDifferentSize') {
-      // Una sola prenda suelta de un producto: con otra de distinto talle entra.
+      if (!isSameProductConfig(definition.config)) continue;
+      const { productIds } = definition.config;
+
+      // Una sola prenda suelta de un producto alcanzado por la promo: con otra
+      // de distinto talle entra. Sin el filtro se sugería sumar otra toalla.
       const alone = leftovers.filter(
-        (unit) => leftovers.filter((other) => other.productId === unit.productId).length === 1,
+        (unit) =>
+          productIds.includes(unit.productId) &&
+          leftovers.filter((other) => other.productId === unit.productId).length === 1,
       );
 
       for (const unit of alone) {

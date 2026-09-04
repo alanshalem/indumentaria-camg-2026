@@ -23,6 +23,7 @@ const FILES = {
     'db/migrations/0001_init.sql',
     'db/migrations/0002_order_emails.sql',
     'db/migrations/0003_product_category.sql',
+    'db/migrations/0004_promo_scope.sql',
   ],
   seed: ['db/seed.sql'],
 };

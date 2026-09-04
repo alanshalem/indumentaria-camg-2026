@@ -1,5 +1,8 @@
 import type { PromotionDefinition } from '../../shared/domain/promotions.js';
-import type { PromotionPatchDto } from '../../shared/schemas/promotion.schema.js';
+import type {
+  PromotionInputDto,
+  PromotionPatchDto,
+} from '../../shared/schemas/promotion.schema.js';
 import { notFound } from '../http/errors.js';
 import { toPromotion, type PromotionRow } from './mappers.js';
 import { toHttpError } from './postgrestError.js';
@@ -10,7 +13,9 @@ const COLUMNS = 'id,kind,label,description,config,is_active,sort_order';
 
 export interface PromotionRepository {
   list(options?: { includeInactive?: boolean }): Promise<PromotionDefinition[]>;
+  create(id: string, input: Omit<PromotionInputDto, 'id'>): Promise<PromotionDefinition>;
   update(id: string, patch: PromotionPatchDto): Promise<PromotionDefinition>;
+  remove(id: string): Promise<void>;
 }
 
 export const promotionRepository: PromotionRepository = {
@@ -21,6 +26,25 @@ export const promotionRepository: PromotionRepository = {
     const { data, error } = await query.order('sort_order', { ascending: true });
     if (error) throw toHttpError(error, 'promotions.list');
     return (data as unknown as PromotionRow[]).map(toPromotion);
+  },
+
+  async create(id, input) {
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .insert({
+        id,
+        kind: input.kind,
+        label: input.label,
+        description: input.description,
+        config: input.config,
+        is_active: input.isActive,
+        sort_order: input.sortOrder,
+      })
+      .select(COLUMNS)
+      .single();
+
+    if (error) throw toHttpError(error, 'promotions.create');
+    return toPromotion(data as unknown as PromotionRow);
   },
 
   async update(id, patch) {
@@ -41,5 +65,17 @@ export const promotionRepository: PromotionRepository = {
     if (error) throw toHttpError(error, 'promotions.update');
     if (!data) throw notFound(`No existe la promoción "${id}".`);
     return toPromotion(data as unknown as PromotionRow);
+  },
+
+  async remove(id) {
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .delete()
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+
+    if (error) throw toHttpError(error, 'promotions.remove');
+    if (!data) throw notFound(`No existe la promoción "${id}".`);
   },
 };

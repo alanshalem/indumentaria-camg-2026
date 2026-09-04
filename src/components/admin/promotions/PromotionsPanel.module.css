@@ -154,3 +154,56 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+.toolbarActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.delete {
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  transition: color var(--transition);
+}
+
+.delete:hover:not(:disabled) {
+  color: #ff8a8a;
+}
+
+.delete:disabled {
+  opacity: 0.5;
+}
+
+/* Confirmación en la misma tarjeta: un modal para esto es de más. */
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(220, 20, 60, 0.5);
+  border-radius: var(--radius-sm);
+  background: rgba(220, 20, 60, 0.1);
+  font-size: 0.86rem;
+}
+
+.confirmActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.warn {
+  font-style: normal;
+  color: #fbbf24;
+}

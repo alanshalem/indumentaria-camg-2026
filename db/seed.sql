@@ -101,20 +101,27 @@ on conflict (id) do update set
 -- -----------------------------------------------------------------------------
 insert into public.promotions (id, kind, label, description, config, is_active, sort_order)
 values
-  ('combo-buzo-pantalon',
+  -- Campera + pantalón. Precio del combo: mismo ahorro que tenía el combo
+  -- anterior (−$9.000 en talles grandes, −$10.000 en chicos). El club lo ajusta
+  -- desde el panel sin tocar esto.
+  ('combo-campera-pantalon',
    'combo',
-   'Combo buzo ½ cierre + pantalón',
-   'Llevando un buzo medio cierre y un pantalón juntos, pagás el precio del combo.',
-   '{"productIds":["buzo-medio-cierre","pantalon-con-cierre"],
-     "bundlePriceLarge":85000,
-     "bundlePriceSmall":75000}'::jsonb,
+   'Combo campera + pantalón',
+   'Llevando una campera y un pantalón juntos, pagás el precio del combo.',
+   '{"productIds":["campera-canguro","pantalon-con-cierre"],
+     "bundlePriceLarge":93500,
+     "bundlePriceSmall":82500}'::jsonb,
    true, 10),
 
+  -- Sólo indumentaria. Sin esta lista la promo descontaba también toalla,
+  -- cuello y medias, que es justo lo que el club no quiere.
   ('familia-camg',
    'sameProductDifferentSize',
    'Promo familia CAMG',
    'Con la compra de 2 productos iguales de distinto talle, 10% de descuento en el más barato.',
-   '{"percentOff":10}'::jsonb,
+   '{"percentOff":10,
+     "productIds":["campera-canguro","buzo-canguro","buzo-medio-cierre",
+                   "pantalon-con-cierre","remera-algodon"]}'::jsonb,
    true, 20)
 
 on conflict (id) do update set
