@@ -1,6 +1,7 @@
 import type { Row, SheetData } from 'write-excel-file/browser';
 import {
   countOrderUnits,
+  countsForBilling,
   customerFullName,
   ORDER_STATUS_LABELS,
   type Order,
@@ -39,17 +40,27 @@ const DATE_TIME = 'dd/mm/yyyy hh:mm';
 
 const STATUS_STYLE: Record<OrderStatus, { textColor: string; backgroundColor: string }> = {
   pending: { textColor: '#B45309', backgroundColor: '#FEF3C7' },
+  deposit: { textColor: '#0F766E', backgroundColor: '#CCFBF1' },
   paid: { textColor: '#1D4ED8', backgroundColor: '#DBEAFE' },
   ready: { textColor: '#6D28D9', backgroundColor: '#EDE9FE' },
   delivered: { textColor: '#166534', backgroundColor: '#DCFCE7' },
+  cancelled: { textColor: '#7F1D1D', backgroundColor: '#FEE2E2' },
 };
 
 /**
- * Un pedido cuenta como confirmado en cuanto se acredita el pago.
- * Es la línea que separa lo que el club puede encargarle al proveedor de lo
- * que todavía es una intención.
+ * Un pedido cuenta como confirmado en cuanto entra plata: con la seña ya hay
+ * compromiso del socio, así que el club puede encargarle la prenda al
+ * proveedor. Es la línea que separa eso de lo que todavía es una intención.
+ *
+ * Un pedido eliminado no cuenta nunca, aunque haya pasado por estados
+ * posteriores a "pendiente".
  */
-export const isConfirmed = (status: OrderStatus): boolean => status !== 'pending';
+export const isConfirmed = (status: OrderStatus): boolean =>
+  status !== 'pending' && countsForBilling(status);
+
+/** Los pedidos que entran en el libro: todos menos los eliminados. */
+const billable = (orders: readonly Order[]): Order[] =>
+  orders.filter((order) => countsForBilling(order.status));
 
 /** Tipos que el paquete no exporta desde su raíz, declarados acá. */
 interface ColumnWidth {
@@ -373,7 +384,7 @@ const summaryKey = (item: OrderItem) => `${item.productId}|${item.size}|${item.c
 export function summarizeByProduct(orders: readonly Order[]): ProductSummaryRow[] {
   const rows = new Map<string, ProductSummaryRow>();
 
-  for (const order of orders) {
+  for (const order of billable(orders)) {
     const confirmed = isConfirmed(order.status);
 
     for (const item of order.items) {
@@ -470,14 +481,22 @@ function summarySheet(orders: readonly Order[], context: ExportContext): Workboo
 
 // ---------------------------------------------------------------------------
 
-/** Las tres hojas del libro, en el orden en que conviene leerlas. */
+/**
+ * Las tres hojas del libro, en el orden en que conviene leerlas.
+ *
+ * Los pedidos eliminados quedan afuera de todo el libro: esta planilla existe
+ * para facturar y para encargarle al proveedor, y un pedido dado de baja no
+ * cuenta para ninguna de las dos cosas.
+ */
 export function buildOrdersWorkbook(
   orders: readonly Order[],
   context: ExportContext,
 ): WorkbookSheet[] {
+  const vivos = billable(orders);
+
   return [
-    ordersSheet(orders, context),
-    itemsSheet(orders, context),
-    summarySheet(orders, context),
+    ordersSheet(vivos, context),
+    itemsSheet(vivos, context),
+    summarySheet(vivos, context),
   ];
 }

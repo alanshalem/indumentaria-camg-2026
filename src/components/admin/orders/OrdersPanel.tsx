@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatPrice } from '@shared/domain/money';
-import type { OrderPage } from '@shared/api/contracts';
+import type { OrderPage, OrderTotals } from '@shared/api/contracts';
 import { ORDERS_PAGE_SIZE } from '@shared/schemas/order.schema';
 import {
-  isOpenOrder,
+  ORDER_STAGES,
   ORDER_STATUS_LABELS,
-  ORDER_STATUSES,
   type Order,
   type OrderStatus,
 } from '@shared/domain/order';
@@ -20,6 +19,7 @@ import { OrderTable } from './OrderTable';
 import styles from '../Dashboard.module.css';
 
 const NO_PAGE: OrderPage = { orders: [], total: 0 };
+const NO_TOTALS: OrderTotals = { revenue: 0, discounts: 0, open: 0, counted: 0 };
 type StatusFilter = OrderStatus | 'all';
 
 const shortDate = (value: string) => value.split('-').reverse().join('/');
@@ -82,21 +82,26 @@ export function OrdersPanel() {
 
   const orders = pageData.orders;
 
+  // Los totales los calcula el servidor sobre TODO el filtro: sumar la página
+  // visible daba el total de 50 pedidos y no el del recorte. Los eliminados
+  // nunca entran.
+  const loadTotals = useCallback(
+    () =>
+      orderService.summary({
+        ...(status !== 'all' ? { status } : {}),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        ...(startOfDayIso(from) ? { from: startOfDayIso(from) } : {}),
+        ...(endOfDayIso(to) ? { to: endOfDayIso(to) } : {}),
+      }),
+    [status, debouncedSearch, from, to],
+  );
+  const { data: totals } = useAsyncResource(loadTotals, NO_TOTALS, [loadTotals, pageData]);
+
   // Cambiar cualquier filtro vuelve a la primera página: si no, un filtro que
   // devuelve pocos resultados se veía vacío por estar parado en la página 3.
   useEffect(() => setPage(0), [status, debouncedSearch, from, to]);
 
   const lastPage = Math.max(0, Math.ceil(pageData.total / ORDERS_PAGE_SIZE) - 1);
-
-  const stats = useMemo(
-    () => ({
-      total: pageData.total,
-      open: orders.filter((order) => isOpenOrder(order.status)).length,
-      revenue: orders.reduce((sum, order) => sum + order.total, 0),
-      discounts: orders.reduce((sum, order) => sum + (order.subtotal - order.total), 0),
-    }),
-    [orders],
-  );
 
   // Actualización optimista: el cambio de estado se ve al instante y la fila
   // queda sincronizada con lo que devolvió el servidor, sin recargar la tabla.
@@ -104,9 +109,14 @@ export function OrdersPanel() {
     (updated: Order) =>
       set((current) => ({
         ...current,
-        orders: current.orders.map((order) => (order.code === updated.code ? updated : order)),
+        // Un pedido eliminado sale del listado en el acto: dejarlo ahí con la
+        // etiqueta puesta hace dudar de si el borrado funcionó.
+        orders:
+          updated.status === 'cancelled' && status !== 'cancelled'
+            ? current.orders.filter((order) => order.code !== updated.code)
+            : current.orders.map((order) => (order.code === updated.code ? updated : order)),
       })),
-    [set],
+    [set, status],
   );
 
   // La librería de Excel se descarga recién acá, al primer click.
@@ -122,7 +132,16 @@ export function OrdersPanel() {
     setExportError('');
     setIsExporting(true);
     try {
-      await exportOrdersToExcel(orders, { filterLabel, generatedAt: new Date() });
+      // Todo el filtro, no la página visible: exportar 50 de 300 pedidos era
+      // una planilla incompleta que parecía completa.
+      const todos = await orderService.listAll({
+        ...(status !== 'all' ? { status } : {}),
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        ...(startOfDayIso(from) ? { from: startOfDayIso(from) } : {}),
+        ...(endOfDayIso(to) ? { to: endOfDayIso(to) } : {}),
+      });
+
+      await exportOrdersToExcel(todos, { filterLabel, generatedAt: new Date() });
     } catch (caught) {
       setExportError(errorMessage(caught, 'No se pudo generar el Excel.'));
     } finally {
@@ -135,17 +154,17 @@ export function OrdersPanel() {
       <section className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Pedidos con este filtro</span>
-          <strong className={styles.statVal}>{stats.total}</strong>
+          <strong className={styles.statVal}>{pageData.total}</strong>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Sin entregar</span>
-          <strong className={styles.statVal}>{stats.open}</strong>
+          <strong className={styles.statVal}>{totals.open}</strong>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Total facturado</span>
-          <strong className={styles.statVal}>{formatPrice(stats.revenue)}</strong>
-          {stats.discounts > 0 && (
-            <span className={styles.statHint}>{formatPrice(stats.discounts)} en promos</span>
+          <strong className={styles.statVal}>{formatPrice(totals.revenue)}</strong>
+          {totals.discounts > 0 && (
+            <span className={styles.statHint}>{formatPrice(totals.discounts)} en promos</span>
           )}
         </div>
       </section>
@@ -163,12 +182,15 @@ export function OrdersPanel() {
           value={status}
           onChange={(event) => setStatus(event.target.value as StatusFilter)}
         >
-          <option value="all">Todos</option>
-          {ORDER_STATUSES.map((option) => (
+          <option value="all">Todos (sin eliminados)</option>
+          {ORDER_STAGES.map((option) => (
             <option key={option} value={option}>
               {ORDER_STATUS_LABELS[option]}
             </option>
           ))}
+          {/* Los eliminados sólo aparecen si se los pide: así no ensucian el
+              listado ni ninguna cuenta. */}
+          <option value="cancelled">{ORDER_STATUS_LABELS.cancelled}</option>
         </SelectField>
         <Field label="Desde" type="date" value={from} onChange={(event) => setFrom(event.target.value)} />
         <Field label="Hasta" type="date" value={to} onChange={(event) => setTo(event.target.value)} />
@@ -176,12 +198,16 @@ export function OrdersPanel() {
           <Button
             variant="ghost"
             onClick={() => void handleExport()}
-            disabled={orders.length === 0}
+            disabled={pageData.total === 0 || status === 'cancelled'}
             loading={isExporting}
-            title={`Descarga un Excel con estos ${orders.length} pedidos: el listado, el detalle de items y el resumen de lo que hay que encargar. Recorte: ${filterLabel}`}
+            title={
+              status === 'cancelled'
+                ? 'Los pedidos eliminados no se exportan: la planilla es para facturar y para encargarle al proveedor.'
+                : `Descarga un Excel con estos ${pageData.total} pedidos: el listado, el detalle de items y el resumen de lo que hay que encargar. Recorte: ${filterLabel}`
+            }
           >
             {/* Dice cuántos: el botón exporta lo filtrado, no todo el histórico. */}
-            {isExporting ? 'Generando…' : `Exportar Excel (${orders.length})`}
+            {isExporting ? 'Generando…' : `Exportar Excel (${pageData.total})`}
           </Button>
           <Button variant="ghost" onClick={() => void reload()}>
             Actualizar

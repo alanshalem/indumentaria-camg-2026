@@ -7,7 +7,12 @@ import {
   type OrderStatus,
   type PublicOrder,
 } from '../../../shared/domain/order.js';
-import type { OrderCreated, OrderPage, OrderStatusUpdate } from '../../../shared/api/contracts.js';
+import type {
+  OrderCreated,
+  OrderPage,
+  OrderStatusUpdate,
+  OrderTotals,
+} from '../../../shared/api/contracts.js';
 import { generateOrderCode } from '../../../shared/domain/orderCode.js';
 import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product.js';
 import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions.js';
@@ -27,6 +32,7 @@ const cryptoRandomInts = (count: number, max: number): number[] =>
 
 export interface OrdersService {
   list(filters: OrderQueryDto): Promise<OrderPage>;
+  summary(filters: OrderQueryDto): Promise<OrderTotals>;
   /** Seguimiento público: sólo lo abre quien tiene el link firmado del mail. */
   findPublic(code: string, token: string): Promise<PublicOrder>;
   create(input: CreateOrderInput): Promise<OrderCreated>;
@@ -41,6 +47,8 @@ export function createOrdersService(
 ): OrdersService {
   return {
     list: (filters) => orders.list(filters),
+
+    summary: (filters) => orders.summary(filters),
 
     async findPublic(code, token) {
       // Un token inválido devuelve 404, no 401: así la respuesta no confirma

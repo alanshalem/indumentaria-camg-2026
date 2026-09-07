@@ -3,7 +3,10 @@ import {
   computeSubtotal,
   countOrderUnits,
   describeItem,
+  countsForBilling,
   isOpenOrder,
+  isStage,
+  ORDER_STAGES,
   ORDER_STATUSES,
 } from '../shared/domain/order';
 import { generateOrderCode, isOrderCode } from '../shared/domain/orderCode';
@@ -57,9 +60,29 @@ describe('order', () => {
     expect(countOrderUnits(items)).toBe(5);
   });
 
-  it('sólo "entregado" cierra el pedido', () => {
-    expect(ORDER_STATUSES.filter(isOpenOrder)).toEqual(['pending', 'paid', 'ready']);
+  it('cierran el pedido tanto "entregado" como "eliminado"', () => {
+    expect(ORDER_STATUSES.filter(isOpenOrder)).toEqual(['pending', 'deposit', 'paid', 'ready']);
     expect(isOpenOrder('delivered')).toBe(false);
+    // Un pedido eliminado no es trabajo pendiente para nadie.
+    expect(isOpenOrder('cancelled')).toBe(false);
+  });
+
+  it('un pedido eliminado no suma en ninguna cuenta', () => {
+    expect(countsForBilling('cancelled')).toBe(false);
+    for (const stage of ORDER_STAGES) expect(countsForBilling(stage)).toBe(true);
+  });
+
+  it('eliminado no es una etapa del circuito', () => {
+    // La linea de tiempo y los avisos pendientes recorren ORDER_STAGES como
+    // una secuencia; "eliminado" no esta despues de "entregado", esta afuera.
+    expect(ORDER_STAGES).not.toContain('cancelled');
+    expect(isStage('cancelled')).toBe(false);
+    expect(isStage('deposit')).toBe(true);
+  });
+
+  it('la seña va entre el pedido y el pago confirmado', () => {
+    expect(ORDER_STAGES.indexOf('deposit')).toBe(ORDER_STAGES.indexOf('pending') + 1);
+    expect(ORDER_STAGES.indexOf('deposit')).toBe(ORDER_STAGES.indexOf('paid') - 1);
   });
 });
 

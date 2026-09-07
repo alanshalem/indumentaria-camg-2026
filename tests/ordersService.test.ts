@@ -59,6 +59,12 @@ function fakeOrders(): OrderRepository & { saved: Order[] } {
   return {
     saved,
     list: async () => ({ orders: saved, total: saved.length }),
+    summary: async () => ({
+      revenue: saved.reduce((sum, order) => sum + order.total, 0),
+      discounts: 0,
+      open: saved.length,
+      counted: saved.length,
+    }),
     findByCode: async (code) => saved.find((order) => order.code === code) ?? null,
     create: async (order) => {
       saved.push(order);

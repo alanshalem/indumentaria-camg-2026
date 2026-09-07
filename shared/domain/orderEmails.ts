@@ -1,4 +1,4 @@
-import { ORDER_STATUSES, type OrderStatus } from './order.js';
+import { isCancelled, ORDER_STAGES, type OrderStatus } from './order.js';
 
 /**
  * Mails transaccionales del pedido.
@@ -7,11 +7,17 @@ import { ORDER_STATUSES, type OrderStatus } from './order.js';
  * (pedido, kind) sobre los envíos exitosos, así que aunque el admin vuelva a
  * mover el estado de ida y vuelta, el socio recibe cada aviso una sola vez.
  */
-export const EMAIL_KINDS = ['orderReceived', 'paymentConfirmed', 'readyForPickup'] as const;
+export const EMAIL_KINDS = [
+  'orderReceived',
+  'depositReceived',
+  'paymentConfirmed',
+  'readyForPickup',
+] as const;
 export type EmailKind = (typeof EMAIL_KINDS)[number];
 
 export const EMAIL_KIND_LABELS: Record<EmailKind, string> = {
   orderReceived: 'Recibimos tu pedido',
+  depositReceived: 'Recibimos tu seña',
   paymentConfirmed: 'Confirmamos tu pago',
   readyForPickup: 'Listo para retirar',
 };
@@ -22,6 +28,7 @@ export const EMAIL_KIND_LABELS: Record<EmailKind, string> = {
  */
 export const EMAIL_FOR_STATUS: Partial<Record<OrderStatus, EmailKind>> = {
   pending: 'orderReceived',
+  deposit: 'depositReceived',
   paid: 'paymentConfirmed',
   ready: 'readyForPickup',
 };
@@ -54,10 +61,14 @@ export interface EmailNotice {
 export const missedNoticeKinds = (
   status: OrderStatus,
   sent: readonly EmailKind[],
-): EmailKind[] =>
-  ORDER_STATUSES.slice(0, ORDER_STATUSES.indexOf(status) + 1)
+): EmailKind[] => {
+  // Un pedido eliminado no le debe ningún aviso a nadie.
+  if (isCancelled(status)) return [];
+
+  return ORDER_STAGES.slice(0, ORDER_STAGES.indexOf(status as never) + 1)
     .map(emailKindForStatus)
     .filter((kind): kind is EmailKind => kind !== null && !sent.includes(kind));
+};
 
 /** Una línea del historial de avisos, como la lee el panel. */
 export interface EmailLogRecord {

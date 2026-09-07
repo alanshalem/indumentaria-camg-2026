@@ -26,6 +26,7 @@ export const ROUTES = {
     collection: '/orders',
     byCode: (code: string) => `/orders/${encodeURIComponent(code)}`,
     pattern: '/orders/:code',
+    summary: '/orders/summary',
     emails: (code: string) => `/orders/${encodeURIComponent(code)}/emails`,
     emailsPattern: '/orders/:code/emails',
   },
@@ -91,5 +92,22 @@ export interface OrderCreated {
 /** Una página de pedidos del panel, con el total que matchea el filtro. */
 export interface OrderPage {
   orders: Order[];
+  /** Cuántos pedidos matchean el filtro, más allá de esta página. */
   total: number;
+}
+
+/**
+ * Los números de las tarjetas del panel.
+ *
+ * Los calcula el servidor sobre todo el filtro: sumarlos en el cliente daba el
+ * total de la página visible, que con más de 50 pedidos no es el total de nada.
+ * Los pedidos eliminados nunca entran.
+ */
+export interface OrderTotals {
+  revenue: number;
+  discounts: number;
+  /** Ni entregados ni eliminados. */
+  open: number;
+  /** Cuántos pedidos entraron en estas cuentas. */
+  counted: number;
 }

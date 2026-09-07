@@ -69,13 +69,16 @@ export const orderCodeSchema = z
 /** Cuántos pedidos trae una página del panel. */
 export const ORDERS_PAGE_SIZE = 50;
 
+/** El Excel pide de a más: son pocas idas y vueltas para exportar la temporada. */
+export const EXPORT_PAGE_SIZE = 500;
+
 export const orderQuerySchema = z.object({
   status: orderStatusSchema.optional(),
   search: z.string().trim().max(80).optional(),
   from: z.string().trim().optional(),
   to: z.string().trim().optional(),
   // La query llega como texto: `coerce` la pasa a número antes de validar.
-  limit: z.coerce.number().int().min(1).max(200).default(ORDERS_PAGE_SIZE),
+  limit: z.coerce.number().int().min(1).max(EXPORT_PAGE_SIZE).default(ORDERS_PAGE_SIZE),
   offset: z.coerce.number().int().min(0).default(0),
 });
 

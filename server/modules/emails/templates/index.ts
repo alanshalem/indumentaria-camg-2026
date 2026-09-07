@@ -136,7 +136,61 @@ const orderReceived: Template = ({ order, email, club = CLUB }) => {
 };
 
 // ---------------------------------------------------------------------------
-//  2 · Pago confirmado
+//  2 · Seña recibida (falta completar el pago)
+// ---------------------------------------------------------------------------
+
+const depositReceived: Template = ({ order, email, club = CLUB }) => {
+  const comoCompletar = club.paymentAlias
+    ? paragraph(
+        `Para completar el pago, transferí el saldo al alias <strong>${escapeHtml(club.paymentAlias)}</strong> poniendo <strong>${escapeHtml(order.code)}</strong> como referencia.`,
+      )
+    : paragraph('El club te va a pasar por WhatsApp cuánto falta y cómo completarlo.');
+
+  return {
+    subject: `Recibimos tu seña · ${order.code}`,
+    html: layout({
+      preheader: `Registramos tu seña. El total del pedido es ${formatPrice(order.total)}.`,
+      siteUrl: email.siteUrl,
+      body: [
+        heading(`Recibimos tu seña, ${firstName(order)}`),
+        paragraph(
+          `Ya quedó registrada. Tu pedido todavía <strong>no está confirmado</strong>: falta completar el pago del total, que es <strong>${escapeHtml(formatPrice(order.total))}</strong>.`,
+        ),
+        codeBlock(order.code),
+        itemsTable(order),
+        comoCompletar,
+        pickupBox(club),
+        button('Ver el estado de mi pedido', statusLink(order, email.siteUrl)),
+        muted(PICKUP_NOTE),
+      ].join('\n'),
+      footerNote: 'Cuando se acredite el pago completo te avisamos por este mismo medio.',
+    }),
+    text: plainText([
+      `Recibimos tu sena, ${firstName(order)}`,
+      '',
+      `Ya quedo registrada. Tu pedido todavia NO esta confirmado: falta completar el pago del total, que es ${formatPrice(order.total)}.`,
+      '',
+      `CODIGO DE PEDIDO: ${order.code}`,
+      '',
+      'TU PEDIDO',
+      itemsText(order),
+      '',
+      club.paymentAlias
+        ? `Para completar el pago, transferi el saldo al alias ${club.paymentAlias} usando ${order.code} como referencia.`
+        : 'El club te va a pasar por WhatsApp cuanto falta y como completarlo.',
+      '',
+      'DONDE SE RETIRA',
+      ...pickupText(club),
+      '',
+      `Segui tu pedido aca: ${statusLink(order, email.siteUrl)}`,
+      '',
+      PICKUP_NOTE,
+    ]),
+  };
+};
+
+// ---------------------------------------------------------------------------
+//  3 · Pago confirmado
 // ---------------------------------------------------------------------------
 
 const paymentConfirmed: Template = ({ order, email, club = CLUB }) => ({
@@ -179,7 +233,7 @@ const paymentConfirmed: Template = ({ order, email, club = CLUB }) => ({
 });
 
 // ---------------------------------------------------------------------------
-//  3 · Listo para retirar
+//  4 · Listo para retirar
 // ---------------------------------------------------------------------------
 
 const readyForPickup: Template = ({ order, email, club = CLUB }) => ({
@@ -221,6 +275,7 @@ const readyForPickup: Template = ({ order, email, club = CLUB }) => ({
 
 const TEMPLATES: Record<EmailKind, Template> = {
   orderReceived,
+  depositReceived,
   paymentConfirmed,
   readyForPickup,
 };

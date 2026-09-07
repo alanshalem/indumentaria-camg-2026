@@ -3,7 +3,8 @@ import { formatPrice } from '@shared/domain/money';
 import {
   countOrderUnits,
   customerFullName,
-  ORDER_STATUSES,
+  isCancelled,
+  ORDER_STAGES,
   ORDER_STATUS_LABELS,
   type Order,
   type OrderStatus,
@@ -15,7 +16,7 @@ import { formatPhone, whatsappLink } from '@shared/domain/phone';
 import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
 import { formatDateTime } from '@/utils/formatDate';
-import { Alert, EmptyState } from '@/ui';
+import { Alert, Button, EmptyState, Modal } from '@/ui';
 import styles from './OrderTable.module.css';
 
 interface Props {
@@ -30,7 +31,7 @@ interface Props {
  * elijo este otro, ¿le llega algo?", y eso no se puede contestar mirando una
  * sola fila.
  */
-const STATUS_HELP = ORDER_STATUSES.map((status) => {
+const STATUS_HELP = ORDER_STAGES.map((status) => {
   const kind = emailKindForStatus(status);
   return `${ORDER_STATUS_LABELS[status]} → ${kind ? `mail "${EMAIL_KIND_LABELS[kind]}"` : 'no manda mail'}`;
 }).join('\n');
@@ -40,6 +41,9 @@ export function OrderTable({ orders, onStatusChange }: Props) {
   const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // Eliminar es destructivo y la fila es angosta: se confirma en un diálogo
+  // que dice de qué pedido se trata.
+  const [confirming, setConfirming] = useState<Order | null>(null);
 
   async function changeStatus(order: Order, status: OrderStatus) {
     if (status === order.status) return;
@@ -70,6 +74,41 @@ export function OrderTable({ orders, onStatusChange }: Props) {
     <>
       {notice && <Alert tone="success">{notice}</Alert>}
       {error && <Alert>{error}</Alert>}
+
+      <Modal
+        isOpen={confirming !== null}
+        onClose={() => setConfirming(null)}
+        title="Eliminar pedido"
+      >
+        {confirming && (
+          <div className={styles.confirm}>
+            <p>
+              El pedido <strong>{confirming.code}</strong> de{' '}
+              <strong>{customerFullName(confirming)}</strong> por{' '}
+              <strong>{formatPrice(confirming.total)}</strong> deja de contar en los totales y sale
+              del listado.
+            </p>
+            <p className={styles.confirmNote}>
+              No se borra de la base: queda como «Eliminado» y lo podés restaurar filtrando por ese
+              estado. Al socio no le llega ningún mail.
+            </p>
+            <div className={styles.confirmActions}>
+              <Button variant="ghost" onClick={() => setConfirming(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  const target = confirming;
+                  setConfirming(null);
+                  void changeStatus(target, 'cancelled');
+                }}
+              >
+                Eliminar pedido
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -115,32 +154,67 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                       {saved > 0 && <span className={styles.saved}>−{formatPrice(saved)}</span>}
                     </td>
                     <td>
-                      <select
-                        className={`${styles.statusSelect} ${styles[order.status]}`}
-                        value={order.status}
-                        disabled={pendingCode === order.code}
-                        onChange={(event) =>
-                          void changeStatus(order, event.target.value as OrderStatus)
-                        }
-                        aria-label={`Estado del pedido ${order.code}`}
-                        title={STATUS_HELP}
-                      >
-                        {ORDER_STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {ORDER_STATUS_LABELS[status]}
-                          </option>
-                        ))}
-                      </select>
+                      {/* Un pedido eliminado no está en ninguna etapa: en vez
+                          del selector va la marca, con la opción de restaurar. */}
+                      {isCancelled(order.status) ? (
+                        <span className={`${styles.statusTag} ${styles.cancelled}`}>
+                          {ORDER_STATUS_LABELS.cancelled}
+                        </span>
+                      ) : (
+                        <select
+                          className={`${styles.statusSelect} ${styles[order.status]}`}
+                          value={order.status}
+                          disabled={pendingCode === order.code}
+                          onChange={(event) =>
+                            void changeStatus(order, event.target.value as OrderStatus)
+                          }
+                          aria-label={`Estado del pedido ${order.code}`}
+                          title={STATUS_HELP}
+                        >
+                          {ORDER_STAGES.map((status) => (
+                            <option key={status} value={status}>
+                              {ORDER_STATUS_LABELS[status]}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className={styles.expand}
-                        onClick={() => setExpandedCode(isOpen ? null : order.code)}
-                        aria-expanded={isOpen}
-                      >
-                        {isOpen ? 'Ocultar' : 'Detalle'}
-                      </button>
+                      <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.expand}
+                          onClick={() => setExpandedCode(isOpen ? null : order.code)}
+                          aria-expanded={isOpen}
+                        >
+                          {isOpen ? 'Ocultar' : 'Detalle'}
+                        </button>
+
+                        {isCancelled(order.status) ? (
+                          <button
+                            type="button"
+                            className={styles.restore}
+                            onClick={() => void changeStatus(order, 'pending')}
+                            disabled={pendingCode === order.code}
+                            title="Vuelve al circuito como «Pendiente de pago»"
+                          >
+                            Restaurar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.trash}
+                            onClick={() => setConfirming(order)}
+                            disabled={pendingCode === order.code}
+                            aria-label={`Eliminar el pedido ${order.code}`}
+                            title="Eliminar este pedido"
+                          >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   {isOpen && (

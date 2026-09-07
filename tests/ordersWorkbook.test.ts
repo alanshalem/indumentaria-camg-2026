@@ -213,11 +213,30 @@ describe('resumen: lo que hay que encargarle al proveedor', () => {
     });
   });
 
-  it('un pedido ya entregado sigue contando como confirmado', () => {
-    for (const status of ['paid', 'ready', 'delivered'] as const) {
+  it('con la seña ya hay compromiso: cuenta como encargable', () => {
+    for (const status of ['deposit', 'paid', 'ready', 'delivered'] as const) {
       expect(isConfirmed(status)).toBe(true);
     }
     expect(isConfirmed('pending')).toBe(false);
+  });
+
+  it('un pedido eliminado no cuenta como confirmado', () => {
+    // Regresion: `status !== 'pending'` daba true para 'cancelled' y el club
+    // le encargaba al proveedor una prenda de un pedido dado de baja.
+    expect(isConfirmed('cancelled')).toBe(false);
+  });
+
+  it('un pedido eliminado no suma unidades ni importe en el resumen', () => {
+    const summary = summarizeByProduct([
+      order([item({ size: 'M', quantity: 2 })], { status: 'paid' }),
+      order([item({ size: 'M', quantity: 5 })], { status: 'cancelled' }),
+    ]);
+
+    expect(summary[0]).toMatchObject({
+      confirmedUnits: 2,
+      unconfirmedUnits: 0,
+      confirmedAmount: 54000 * 2,
+    });
   });
 
   it('el importe confirmado ignora lo pendiente', () => {

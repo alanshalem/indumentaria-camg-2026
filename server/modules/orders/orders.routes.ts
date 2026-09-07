@@ -20,6 +20,15 @@ export const orderRoutes = new Router()
       return ok(await ordersService.list(filters));
     }),
   )
+  // Totales del panel. Van aparte del listado porque se calculan sobre todo el
+  // filtro y no sobre la página que se está mirando.
+  .get(
+    ROUTES.orders.summary,
+    adminOnly(async (request) => {
+      const filters = parseOrThrow(orderQuerySchema, request.query, 'Filtros inválidos');
+      return ok(await ordersService.summary(filters));
+    }),
+  )
   // Historial de avisos. Va antes de `/orders/:code` sólo por claridad: son
   // rutas de distinto largo y el router no las confunde.
   .get(

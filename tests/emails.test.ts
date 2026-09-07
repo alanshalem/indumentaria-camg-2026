@@ -438,24 +438,31 @@ describe('que se le aviso al socio', () => {
       order({ status: 'delivered' }),
     );
 
-    expect(missed).toEqual(['paymentConfirmed', 'readyForPickup']);
+    expect(missed).toEqual(['depositReceived', 'paymentConfirmed', 'readyForPickup']);
   });
 });
 
 describe('missedNoticeKinds', () => {
   it('no cuenta las etapas que el pedido todavia no alcanzo', () => {
     // Recien pago: que no haya recibido "listo para retirar" es lo esperado.
-    expect(missedNoticeKinds('paid', ['orderReceived', 'paymentConfirmed'])).toEqual([]);
+    expect(
+      missedNoticeKinds('paid', ['orderReceived', 'depositReceived', 'paymentConfirmed']),
+    ).toEqual([]);
   });
 
   it('marca lo que quedo sin mandar de las etapas ya superadas', () => {
     expect(missedNoticeKinds('ready', ['orderReceived'])).toEqual([
+      'depositReceived',
       'paymentConfirmed',
       'readyForPickup',
     ]);
   });
 
-  it('entregado exige los tres avisos: es el final del recorrido', () => {
+  it('un pedido eliminado no debe ningun aviso', () => {
+    expect(missedNoticeKinds('cancelled', [])).toEqual([]);
+  });
+
+  it('entregado exige todos los avisos: es el final del recorrido', () => {
     expect(missedNoticeKinds('delivered', [])).toEqual(EMAIL_KINDS);
     expect(missedNoticeKinds('delivered', [...EMAIL_KINDS])).toEqual([]);
   });
