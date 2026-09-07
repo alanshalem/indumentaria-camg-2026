@@ -157,3 +157,15 @@
 .cta {
   margin-top: auto;
 }
+
+/* Sin stock no se bloquea la venta: se avisa el plazo y se sigue. */
+.onDemand {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px dashed rgba(245, 158, 11, 0.5);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #fbbf24;
+}

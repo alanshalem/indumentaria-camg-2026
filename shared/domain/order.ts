@@ -59,6 +59,11 @@ export interface OrderItem {
   color: string | null;
   quantity: number;
   unitPrice: Ars;
+  /**
+   * Unidades de esta línea que no había en stock y salen a pedido.
+   * Cero —o ausente, en pedidos anteriores al inventario— es entrega normal.
+   */
+  backorderedUnits: number;
 }
 
 export interface Order {
@@ -115,6 +120,14 @@ export const countOrderUnits = (items: readonly Pick<OrderItem, 'quantity'>[]): 
 
 export const customerFullName = (order: Pick<Order, 'customerName' | 'customerLastName'>): string =>
   `${order.customerName} ${order.customerLastName}`.trim();
+
+/** La línea sale a pedido: hay unidades que el club no tenía físicamente. */
+export const isBackordered = (item: Pick<OrderItem, 'backorderedUnits'>): boolean =>
+  item.backorderedUnits > 0;
+
+/** Al menos una prenda del pedido sale a pedido. */
+export const hasBackorder = (order: Pick<Order, 'items'>): boolean =>
+  order.items.some(isBackordered);
 
 /** Etiqueta de una línea para tablas y CSV: "2× Remera (M · Roja)". */
 export const describeItem = (item: OrderItem): string =>

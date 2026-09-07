@@ -6,18 +6,21 @@ import { Picture } from '@/ui/Picture';
 import { OrdersPanel } from './orders/OrdersPanel';
 import { ProductsPanel } from './products/ProductsPanel';
 import { PromotionsPanel } from './promotions/PromotionsPanel';
+import { EmailsPanel } from './emails/EmailsPanel';
 import styles from './Dashboard.module.css';
 
 const TABS = [
   { id: 'orders', label: 'Pedidos' },
   { id: 'products', label: 'Productos' },
   { id: 'promotions', label: 'Promos' },
+  { id: 'emails', label: 'Mails' },
 ] as const;
 
 const PANELS: Record<TabId, ComponentType> = {
   orders: OrdersPanel,
   products: ProductsPanel,
   promotions: PromotionsPanel,
+  emails: EmailsPanel,
 };
 
 type TabId = (typeof TABS)[number]['id'];

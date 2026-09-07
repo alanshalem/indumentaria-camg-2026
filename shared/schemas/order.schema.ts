@@ -1,18 +1,26 @@
 import { z } from 'zod';
 import { ORDER_STATUSES } from '../domain/order.js';
 import { ORDER_CODE_PATTERN } from '../domain/orderCode.js';
+import { normalizeName } from '../domain/name.js';
 import { isValidPhone, normalizePhone } from '../domain/phone.js';
 
 export const MAX_UNITS_PER_LINE = 50;
 export const MAX_LINES_PER_ORDER = 40;
 
-/** El mensaje del tipo base cubre el caso "no vino el campo". */
+/**
+ * El mensaje del tipo base cubre el caso "no vino el campo".
+ *
+ * Se normaliza DESPUÉS de validar el largo: el socio tipea "NATALIA BACCHETTO"
+ * o "marianela fontana" y en la base queda "Natalia Bacchetto". Limpiarlo acá
+ * y no en cada pantalla hace que el panel, el mail y el Excel lo hereden solos.
+ */
 const personName = (what: string) =>
   z
     .string(`Ingresá ${what}`)
     .trim()
     .min(2, 'Ingresá al menos 2 caracteres')
-    .max(60, 'Máximo 60 caracteres');
+    .max(60, 'Máximo 60 caracteres')
+    .transform(normalizeName);
 
 /**
  * El teléfono se guarda normalizado a dígitos: así se puede buscar y armar el

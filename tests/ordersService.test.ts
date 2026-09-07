@@ -9,7 +9,9 @@ import type { PromotionRepository } from '../server/infra/promotionRepository';
 import type { EmailsService } from '../server/modules/emails/emails.service';
 import { createOrdersService } from '../server/modules/orders/orders.service';
 import { HttpError } from '../server/http/errors';
+import { hasBackorder } from '../shared/domain/order';
 import { emailKindForStatus, type EmailKind } from '../shared/domain/orderEmails';
+import type { StockRepository } from '../server/infra/stockRepository';
 import { signOrderToken } from '../server/security/orderToken';
 
 const product = (overrides: Partial<Product> = {}): Product => ({
@@ -24,6 +26,7 @@ const product = (overrides: Partial<Product> = {}): Product => ({
   colors: [],
   sizeChartId: 'buzos',
   category: 'abrigo',
+  stock: [],
   isActive: true,
   sortOrder: 0,
   createdAt: '2026-01-01T00:00:00Z',
@@ -50,6 +53,7 @@ function fakeProducts(catalog: Product[]): ProductRepository {
       new Map(catalog.filter((item) => ids.includes(item.id)).map((item) => [item.id, item])),
     create: unused,
     update: (_id: string, _patch: Partial<ProductInput>) => unused(),
+    setStock: unused,
     remove: unused,
   };
 }
@@ -85,6 +89,31 @@ const fakePromotions = (definitions: PromotionDefinition[] = []): PromotionRepos
   return { list: async () => definitions, create: unused, update: unused, remove: unused };
 };
 
+/**
+ * Doble del inventario. `disponible` mapea variante -> unidades; lo que no
+ * este en el mapa no se controla y se entrega normal.
+ */
+function fakeStock(disponible: Record<string, number> = {}) {
+  const consumido: string[] = [];
+  const repo: StockRepository = {
+    consume: async (items) =>
+      items.map((item) => {
+        const key = `${item.productId}|${item.size}|${item.color ?? ''}`;
+        const stock = disponible[key];
+
+        if (stock === undefined) {
+          return { ...item, taken: item.quantity, backorder: 0, tracked: false };
+        }
+
+        const taken = Math.min(item.quantity, stock);
+        disponible[key] = stock - taken;
+        consumido.push(`${key}:${taken}`);
+        return { ...item, taken, backorder: item.quantity - taken, tracked: true };
+      }),
+  };
+  return { repo, consumido, disponible };
+}
+
 /** Espia de mails: registra a que estado se le aviso, sin tocar la red. */
 function fakeEmails(missed: EmailKind[] = []): EmailsService & { notified: OrderStatus[] } {
   const notified: OrderStatus[] = [];
@@ -97,6 +126,9 @@ function fakeEmails(missed: EmailKind[] = []): EmailsService & { notified: Order
     },
     missedNotices: async () => missed,
     history: async () => [],
+    preview: async () => {
+      throw new Error('no usado');
+    },
   };
 }
 
@@ -431,5 +463,102 @@ describe('ordersService.create · token de seguimiento', () => {
     await expect(
       service.findPublic('CAMG-2026-OTROO', created.statusToken),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+});
+
+describe('inventario al generar el pedido', () => {
+  const armar = (disponible: Record<string, number> = {}) => {
+    const stock = fakeStock(disponible);
+    const service = createOrdersService(
+      fakeOrders(),
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repo,
+    );
+    return { service, stock };
+  };
+
+  const pedir = (service: ReturnType<typeof createOrdersService>, quantity: number) =>
+    service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity }],
+    });
+
+  it('con stock suficiente no marca nada a pedido', async () => {
+    const { service, stock } = armar({ 'campera-canguro|M|': 5 });
+
+    const { order } = await pedir(service, 2);
+
+    expect(order.items[0]?.backorderedUnits).toBe(0);
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
+  });
+
+  it('agotada, la venta NO se bloquea: sale entera a pedido', async () => {
+    const { service } = armar({ 'campera-canguro|M|': 0 });
+
+    const { order } = await pedir(service, 2);
+
+    // La regla del club: el stock decide el plazo, no si se puede comprar.
+    expect(order.items[0]?.quantity).toBe(2);
+    expect(order.items[0]?.backorderedUnits).toBe(2);
+    expect(hasBackorder(order)).toBe(true);
+  });
+
+  it('parcial: descuenta lo que hay y el resto queda a pedido', async () => {
+    const { service, stock } = armar({ 'campera-canguro|M|': 1 });
+
+    const { order } = await pedir(service, 3);
+
+    expect(order.items[0]?.backorderedUnits).toBe(2);
+    expect(stock.disponible['campera-canguro|M|']).toBe(0);
+  });
+
+  it('una variante sin stock cargado se entrega normal', async () => {
+    const { service } = armar({});
+
+    const { order } = await pedir(service, 4);
+
+    expect(order.items[0]?.backorderedUnits).toBe(0);
+  });
+
+  it('el precio no cambia por salir a pedido', async () => {
+    const { service } = armar({ 'campera-canguro|M|': 0 });
+
+    const { order } = await pedir(service, 1);
+
+    // A pedido cambia el plazo, no lo que paga el socio.
+    expect(order.items[0]?.unitPrice).toBe(54000);
+    expect(order.total).toBe(54000);
+  });
+
+  it('el stock se descuenta una sola vez aunque el codigo colisione', async () => {
+    const orders = fakeOrders();
+    let intentos = 0;
+    const original = orders.create;
+    orders.create = async (order) => {
+      intentos += 1;
+      if (intentos === 1) throw new HttpError('CONFLICT', 'duplicado');
+      return original(order);
+    };
+
+    const stock = fakeStock({ 'campera-canguro|M|': 5 });
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repo,
+    );
+
+    await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 2 }],
+    });
+
+    expect(intentos).toBe(2);
+    // El descuento va antes del bucle de reintentos: dos intentos, un descuento.
+    expect(stock.consumido).toEqual(['campera-canguro|M|:2']);
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
   });
 });

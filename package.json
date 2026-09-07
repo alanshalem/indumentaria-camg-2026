@@ -15,7 +15,8 @@
     "db:setup": "node scripts/db.mjs setup",
     "db:check": "node scripts/db.mjs check",
     "email:test": "vite-node scripts/emailTest.ts",
-    "images": "vite-node scripts/optimizeImages.ts"
+    "images": "vite-node scripts/optimizeImages.ts",
+    "db:normalize-names": "vite-node scripts/normalizeNames.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",

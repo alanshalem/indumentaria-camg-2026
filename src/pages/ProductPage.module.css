@@ -427,3 +427,30 @@
   font-size: 0.82rem;
   color: var(--color-muted);
 }
+
+/* --- Entrega a pedido --------------------------------------------------------- */
+
+.onDemand {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed rgba(245, 158, 11, 0.55);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.1);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #fbbf24;
+}
+
+.onDemand span {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.lowStock {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}

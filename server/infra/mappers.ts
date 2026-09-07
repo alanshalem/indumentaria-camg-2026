@@ -20,6 +20,14 @@ export interface ProductRow {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  /** Viene del select embebido; ausente en las consultas que no lo piden. */
+  product_stock?: StockRow[] | null;
+}
+
+export interface StockRow {
+  size: string;
+  color: string | null;
+  units: number;
 }
 
 export interface OrderRow {
@@ -66,8 +74,20 @@ export const toProduct = (row: ProductRow): Product => ({
   category: isProductCategory(row.category) ? row.category : 'accesorios',
   isActive: row.is_active,
   sortOrder: row.sort_order,
+  // La columna guarda '' para "sin color"; el dominio usa null.
+  stock: (row.product_stock ?? []).map((level) => ({
+    size: level.size,
+    color: level.color === '' ? null : level.color,
+    units: level.units,
+  })),
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+});
+
+/** Los pedidos anteriores al inventario no tienen el campo: entrega normal. */
+const toOrderItem = (item: OrderItem): OrderItem => ({
+  ...item,
+  backorderedUnits: item.backorderedUnits ?? 0,
 });
 
 export const toOrder = (row: OrderRow): Order => ({
@@ -77,7 +97,7 @@ export const toOrder = (row: OrderRow): Order => ({
   customerLastName: row.customer_last_name,
   phone: row.phone ?? '',
   email: row.email,
-  items: row.items ?? [],
+  items: (row.items ?? []).map(toOrderItem),
   subtotal: row.subtotal ?? row.total ?? 0,
   promotions: row.promotions ?? [],
   total: row.total ?? 0,

@@ -22,6 +22,7 @@ import { signOrderToken, verifyOrderToken } from '../../security/orderToken.js';
 import { orderRepository, type OrderRepository } from '../../infra/orderRepository.js';
 import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
 import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
+import { stockRepository, type StockRepository } from '../../infra/stockRepository.js';
 import { emailsService, type EmailsService } from '../emails/emails.service.js';
 
 const CODE_ATTEMPTS = 5;
@@ -44,6 +45,7 @@ export function createOrdersService(
   products: ProductRepository = productRepository,
   promotions: PromotionRepository = promotionRepository,
   emails: EmailsService = emailsService,
+  stock: StockRepository = stockRepository,
 ): OrdersService {
   return {
     list: (filters) => orders.list(filters),
@@ -62,7 +64,11 @@ export function createOrdersService(
     },
 
     async create(input) {
-      const items = await priceItems(input, products);
+      const priced = await priceItems(input, products);
+
+      // Antes del bucle de reintentos: si el código colisiona y se reintenta,
+      // el stock ya se descontó y no se vuelve a tocar.
+      const items = await applyStock(priced, stock);
 
       // Las promos se evalúan sobre precios ya resueltos por el servidor, con
       // las definiciones activas de la base: el cliente no puede inventarlas.
@@ -166,8 +172,37 @@ async function priceItems(input: CreateOrderInput, products: ProductRepository):
       quantity: item.quantity,
       // Snapshot inmutable: si mañana sube el precio, el pedido viejo no cambia.
       unitPrice: priceForTier(product, tier),
+      // Lo resuelve el descuento de stock, que corre después de tener los
+      // precios: hasta entonces no se sabe qué había físicamente.
+      backorderedUnits: 0,
     };
   });
+}
+
+/**
+ * Descuenta el stock y marca en cada línea cuánto sale a pedido.
+ *
+ * El stock no bloquea la venta: cuando no alcanza, la línea se completa igual y
+ * queda registrado el faltante. Devolver el pedido con el faltante marcado es
+ * lo que después hace que el socio vea el plazo en el mail y el club lo vea en
+ * la tabla.
+ */
+async function applyStock(items: OrderItem[], stock: StockRepository): Promise<OrderItem[]> {
+  const outcomes = await stock.consume(
+    items.map((item) => ({
+      productId: item.productId,
+      size: item.size,
+      color: item.color,
+      quantity: item.quantity,
+    })),
+  );
+
+  // Las respuestas vuelven en el mismo orden en que se pidieron: la función de
+  // Postgres recorre el array de entrada.
+  return items.map((item, index) => ({
+    ...item,
+    backorderedUnits: outcomes[index]?.backorder ?? 0,
+  }));
 }
 
 /** Un producto con colores exige elegir uno; uno sin colores no admite ninguno. */

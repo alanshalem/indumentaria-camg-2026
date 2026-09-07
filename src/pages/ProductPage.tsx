@@ -13,6 +13,7 @@ import {
   type Product,
 } from '@shared/domain/product';
 import { comboPartnerOf, promotionsForProduct } from '@shared/domain/promotions';
+import { isOnDemand, ON_DEMAND_NOTICE, unitsFor } from '@shared/domain/stock';
 import { SIZE_CHARTS, SIZE_CHART_NOTE } from '@shared/domain/sizeCharts';
 import { SizeChartTable } from '@/components/products/SizeChartTable';
 import { productPath } from '@/app/paths';
@@ -89,6 +90,9 @@ function ProductDetail({ product }: { product: Product }) {
   const range = useMemo(() => priceRange(product), [product]);
   const image = imageForColor(product, color);
   const chart = product.sizeChartId ? SIZE_CHARTS[product.sizeChartId] : null;
+
+  const disponibles = tier ? unitsFor(product.stock, size, color) : null;
+  const aPedido = Boolean(tier) && isOnDemand(product.stock, size, color);
 
   const applicable = useMemo(
     () => promotionsForProduct(product.id, promotions),
@@ -222,6 +226,19 @@ function ProductDetail({ product }: { product: Product }) {
                 </ul>
               )}
             </div>
+
+            {aPedido && (
+              <p className={styles.onDemand}>
+                <strong>{ON_DEMAND_NOTICE}</strong>
+                <span>Lo podés pedir igual: el club lo encarga y te avisa cuando llega.</span>
+              </p>
+            )}
+
+            {disponibles !== null && disponibles > 0 && disponibles <= 3 && (
+              <p className={styles.lowStock}>
+                Quedan {disponibles} {disponibles === 1 ? 'unidad' : 'unidades'} de este talle.
+              </p>
+            )}
 
             <div className={styles.buyRow}>
               <QuantityStepper value={quantity} onChange={setQuantity} />

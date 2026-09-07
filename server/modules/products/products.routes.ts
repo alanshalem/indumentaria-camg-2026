@@ -1,5 +1,9 @@
 import { ROUTES } from '../../../shared/api/contracts.js';
-import { productInputSchema, productPatchSchema } from '../../../shared/schemas/product.schema.js';
+import {
+  productInputSchema,
+  productPatchSchema,
+  stockGridSchema,
+} from '../../../shared/schemas/product.schema.js';
 import { Router } from '../../http/router.js';
 import { created, noContent, ok } from '../../http/responses.js';
 import { parseOrThrow } from '../../http/validate.js';
@@ -25,6 +29,15 @@ export const productRoutes = new Router()
     adminOnly(async (request) => {
       const patch = parseOrThrow(productPatchSchema, request.body, 'No se pudo actualizar el producto');
       return ok(await productsService.update(request.params.id!, patch));
+    }),
+  )
+  // La grilla de stock va por su propia ruta: el club la edita cuando entra
+  // mercadería, sin abrir el formulario largo del producto.
+  .patch(
+    ROUTES.products.stockPattern,
+    adminOnly(async (request) => {
+      const { levels } = parseOrThrow(stockGridSchema, request.body, 'No se pudo guardar el stock');
+      return ok(await productsService.setStock(request.params.id!, levels));
     }),
   )
   .delete(

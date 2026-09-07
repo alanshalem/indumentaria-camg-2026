@@ -1,4 +1,5 @@
 import type { Ars } from './money.js';
+import type { StockLevel } from './stock.js';
 import type { SizeChartId } from './sizeCharts.js';
 
 /**
@@ -58,6 +59,11 @@ export interface Product {
   sizeChartId: SizeChartId | null;
   /** Para el filtro del catálogo. */
   category: ProductCategory;
+  /**
+   * Stock físico por variante. Sólo trae las que el club cargó: una variante
+   * ausente no participa del inventario y se vende sin aviso.
+   */
+  stock: StockLevel[];
   isActive: boolean;
   sortOrder: number;
   createdAt: string;

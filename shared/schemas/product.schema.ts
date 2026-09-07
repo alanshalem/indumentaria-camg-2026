@@ -79,6 +79,28 @@ export const productPatchSchema = z
   })
   .refine((patch) => Object.keys(patch).length > 0, 'No hay cambios para aplicar');
 
+/**
+ * La grilla de stock que manda el panel. Reemplaza la del producto entera: una
+ * variante que se saca de la pantalla deja de existir, no queda con su último
+ * valor.
+ */
+export const stockGridSchema = z.object({
+  levels: z
+    .array(
+      z.object({
+        size: sizeSchema,
+        color: trimmed(30).nullable().default(null),
+        units: z
+          .number('Cargá un número')
+          .int('Las unidades son enteras')
+          .min(0, 'No puede ser negativo')
+          .max(9999),
+      }),
+    )
+    .max(200)
+    .default([]),
+});
+
 export const productImageUploadSchema = z.object({
   fileName: z.string().trim().min(1).max(200),
   contentType: z.enum(['image/png', 'image/jpeg', 'image/webp', 'image/avif']),
@@ -89,3 +111,4 @@ export const productImageUploadSchema = z.object({
 export type ProductInputDto = z.infer<typeof productInputSchema>;
 export type ProductPatchDto = z.infer<typeof productPatchSchema>;
 export type ProductImageUploadDto = z.infer<typeof productImageUploadSchema>;
+export type StockGridDto = z.infer<typeof stockGridSchema>;

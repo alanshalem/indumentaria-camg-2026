@@ -1,6 +1,7 @@
 import { CLUB } from '../../../../shared/domain/club.js';
 import { formatPrice } from '../../../../shared/domain/money.js';
-import { countOrderUnits, type Order } from '../../../../shared/domain/order.js';
+import { countOrderUnits, isBackordered, type Order } from '../../../../shared/domain/order.js';
+import { ON_DEMAND_NOTICE } from '../../../../shared/domain/stock.js';
 
 /**
  * Piezas para armar los mails.
@@ -184,11 +185,17 @@ export function itemsTable(order: Order): string {
   const rows = order.items
     .map((item) => {
       const detail = [item.size, item.color].filter(Boolean).join(' · ');
+      // La prenda que salió a pedido lo dice en su propia línea: el socio ve
+      // el plazo pegado a lo que lo tiene esperando, no en una nota al pie.
+      const aPedido = isBackordered(item)
+        ? `<br /><span style="font-size:12px;color:${COLOR.red};font-weight:600;">${escapeHtml(ON_DEMAND_NOTICE)}</span>`
+        : '';
+
       return `
       <tr>
         <td style="padding:10px 0;border-bottom:1px solid ${COLOR.line};font-family:${FONT};font-size:14px;color:${COLOR.ink};">
           <strong style="font-weight:600;">${escapeHtml(item.productName)}</strong><br />
-          <span style="font-size:12px;color:${COLOR.muted};">Talle ${escapeHtml(detail)}</span>
+          <span style="font-size:12px;color:${COLOR.muted};">Talle ${escapeHtml(detail)}</span>${aPedido}
         </td>
         <td align="center" style="padding:10px 8px;border-bottom:1px solid ${COLOR.line};font-family:${FONT};font-size:14px;color:${COLOR.muted};white-space:nowrap;">
           ×${item.quantity}
@@ -244,9 +251,10 @@ export function itemsTable(order: Order): string {
 
 /** Versión de texto plano del detalle, para clientes que no muestran HTML. */
 export function itemsText(order: Order): string {
-  const lines = order.items.map((item) => {
+  const lines = order.items.flatMap((item) => {
     const detail = [item.size, item.color].filter(Boolean).join(' · ');
-    return `  ${item.quantity}x ${item.productName} (${detail}) — ${formatPrice(item.unitPrice * item.quantity)}`;
+    const linea = `  ${item.quantity}x ${item.productName} (${detail}) — ${formatPrice(item.unitPrice * item.quantity)}`;
+    return isBackordered(item) ? [linea, `     ${ON_DEMAND_NOTICE}`] : [linea];
   });
 
   if (order.promotions.length > 0) {

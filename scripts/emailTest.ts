@@ -47,6 +47,7 @@ const sampleOrder = (email: string): Order => ({
       color: null,
       quantity: 1,
       unitPrice: 45500,
+      backorderedUnits: 0,
     },
     {
       productId: 'pantalon-con-cierre',
@@ -56,6 +57,7 @@ const sampleOrder = (email: string): Order => ({
       color: null,
       quantity: 1,
       unitPrice: 48500,
+      backorderedUnits: 0,
     },
   ],
   subtotal: 94000,

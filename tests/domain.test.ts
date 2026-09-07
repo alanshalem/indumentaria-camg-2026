@@ -39,11 +39,11 @@ describe('order', () => {
   const items = [
     {
       productId: 'a', productName: 'Campera', size: 'M', sizeTier: 'large' as const,
-      color: null, quantity: 2, unitPrice: 54000,
+      color: null, quantity: 2, unitPrice: 54000, backorderedUnits: 0,
     },
     {
       productId: 'b', productName: 'Medias', size: '42-50', sizeTier: 'large' as const,
-      color: 'Negras', quantity: 3, unitPrice: 6500,
+      color: 'Negras', quantity: 3, unitPrice: 6500, backorderedUnits: 0,
     },
   ];
 

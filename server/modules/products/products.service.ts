@@ -1,4 +1,5 @@
 import { resolveProductId, type Product, type ProductInput } from '../../../shared/domain/product.js';
+import type { StockLevel } from '../../../shared/domain/stock.js';
 import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
 import { conflict, validationError } from '../../http/errors.js';
 
@@ -6,6 +7,8 @@ export interface ProductsService {
   list(includeInactive: boolean): Promise<Product[]>;
   create(input: Required<Omit<ProductInput, 'id'>> & { id?: string }): Promise<Product>;
   update(id: string, patch: Partial<ProductInput>): Promise<Product>;
+  /** Reemplaza la grilla de stock del producto. */
+  setStock(id: string, levels: readonly StockLevel[]): Promise<Product>;
   remove(id: string): Promise<void>;
 }
 
@@ -35,6 +38,8 @@ export function createProductsService(repository: ProductRepository = productRep
       const { id: _ignored, ...attributes } = patch;
       return repository.update(id, attributes);
     },
+
+    setStock: (id, levels) => repository.setStock(id, levels),
 
     remove: (id) => repository.remove(id),
   };

@@ -225,3 +225,9 @@
     min-width: 700px;
   }
 }
+
+/* Variantes agotadas: el producto se sigue vendiendo, pero a pedido. */
+.iconButton.warn {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.5);
+}

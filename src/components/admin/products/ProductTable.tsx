@@ -8,6 +8,7 @@ interface Props {
   products: readonly Product[];
   busyId: string | null;
   onEdit: (product: Product) => void;
+  onStock: (product: Product) => void;
   onToggleActive: (product: Product) => void;
   onDelete: (product: Product) => void;
 }
@@ -46,7 +47,26 @@ function TierCell({ price, sizes }: { price: number; sizes: readonly string[] })
   );
 }
 
-export function ProductTable({ products, busyId, onEdit, onToggleActive, onDelete }: Props) {
+/** Qué decir del stock sin abrir el editor. */
+function stockTitle(product: Product): string {
+  if (product.stock.length === 0) return `${product.name}: sin control de stock. Cargalo acá.`;
+
+  const unidades = product.stock.reduce((sum, level) => sum + level.units, 0);
+  const agotadas = product.stock.filter((level) => level.units === 0).length;
+
+  return agotadas > 0
+    ? `${unidades} unidades · ${agotadas} variante(s) agotada(s), se venden a pedido`
+    : `${unidades} unidades en stock`;
+}
+
+const BoxIcon = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+    <path d="M21 8v8a2 2 0 0 1-1 1.7l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.7l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z" />
+    <path d="m3.3 7 8.7 5 8.7-5M12 22V12" />
+  </svg>
+);
+
+export function ProductTable({ products, busyId, onEdit, onStock, onToggleActive, onDelete }: Props) {
   if (products.length === 0) {
     return <EmptyState title="Todavía no hay productos cargados." />;
   }
@@ -71,6 +91,8 @@ export function ProductTable({ products, busyId, onEdit, onToggleActive, onDelet
         <tbody>
           {products.map((product) => {
             const isBusy = busyId === product.id;
+            // Cuántas variantes se agotaron: son las que hoy salen a pedido.
+            const agotadas = product.stock.filter((level) => level.units === 0).length;
             return (
               <tr key={product.id} className={product.isActive ? '' : styles.inactiveRow}>
                 <td>
@@ -131,6 +153,16 @@ export function ProductTable({ products, busyId, onEdit, onToggleActive, onDelet
                       aria-label={`Editar ${product.name}`}
                     >
                       <PencilIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.iconButton} ${agotadas > 0 ? styles.warn : ''}`}
+                      onClick={() => onStock(product)}
+                      disabled={isBusy}
+                      title={stockTitle(product)}
+                      aria-label={`Stock de ${product.name}`}
+                    >
+                      <BoxIcon />
                     </button>
                     <button
                       type="button"

@@ -28,6 +28,7 @@ const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({
   productName: 'Campera Canguro',
   size: 'M',
   sizeTier: 'large',
+  backorderedUnits: 0,
   color: null,
   quantity: 1,
   unitPrice: 54000,

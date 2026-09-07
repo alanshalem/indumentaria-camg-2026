@@ -25,6 +25,7 @@ const FILES = {
     'db/migrations/0003_product_category.sql',
     'db/migrations/0004_promo_scope.sql',
     'db/migrations/0005_order_deposit_and_cancel.sql',
+    'db/migrations/0006_stock.sql',
   ],
   seed: ['db/seed.sql'],
 };
@@ -131,6 +132,68 @@ async function withClient(fn) {
 }
 
 /** Corre cada archivo dentro de una transacción: o entra entero, o no entra. */
+/**
+ * Registro de qué migraciones ya corrieron.
+ *
+ * Sin esto el runner reejecutaba TODAS en cada `db:migrate`, y eso funcionó
+ * mientras cada archivo fuera aditivo. Se rompió al agregar estados nuevos: la
+ * 0002 vuelve a poner el check viejo de cuatro estados y falla contra filas que
+ * ya usan los nuevos. Cada archivo corre una sola vez y listo.
+ *
+ * La primera vez adopta una base existente: si ya están las tablas, se dan por
+ * aplicadas todas las migraciones actuales en vez de reejecutarlas.
+ */
+async function ensureLedger(client, relativePaths) {
+  await client.query(`
+    create table if not exists public.schema_migrations (
+      name   text primary key,
+      run_at timestamptz not null default now()
+    )
+  `);
+
+  const { rows } = await client.query('select count(*)::int as n from public.schema_migrations');
+  if (rows[0].n > 0) return;
+
+  const existente = await client.query(`select to_regclass('public.orders') is not null as hay`);
+  if (!existente.rows[0].hay) return;
+
+  console.log('  (base existente: se adoptan las migraciones actuales como aplicadas)');
+  for (const relativePath of relativePaths) {
+    await client.query('insert into public.schema_migrations (name) values ($1)', [relativePath]);
+  }
+}
+
+async function applied(client) {
+  const { rows } = await client.query('select name from public.schema_migrations');
+  return new Set(rows.map((row) => row.name));
+}
+
+async function runMigrations(client, relativePaths) {
+  await ensureLedger(client, relativePaths);
+  const ya = await applied(client);
+
+  const pendientes = relativePaths.filter((path) => !ya.has(path));
+  if (pendientes.length === 0) {
+    console.log('  (sin migraciones pendientes)');
+    return;
+  }
+
+  for (const relativePath of pendientes) {
+    process.stdout.write(`  → ${relativePath} … `);
+    await client.query('begin');
+    try {
+      await client.query(readSql(relativePath));
+      await client.query('insert into public.schema_migrations (name) values ($1)', [relativePath]);
+      await client.query('commit');
+      console.log('ok');
+    } catch (error) {
+      await client.query('rollback');
+      console.log('ERROR');
+      throw error;
+    }
+  }
+}
+
 async function runFiles(client, relativePaths) {
   for (const relativePath of relativePaths) {
     process.stdout.write(`  → ${relativePath} … `);
@@ -182,11 +245,12 @@ async function check(client) {
 }
 
 const COMMANDS = {
-  migrate: (client) => runFiles(client, FILES.migrate),
+  migrate: (client) => runMigrations(client, FILES.migrate),
   seed: (client) => runFiles(client, FILES.seed),
   check,
   async setup(client) {
-    await runFiles(client, [...FILES.migrate, ...FILES.seed]);
+    await runMigrations(client, FILES.migrate);
+    await runFiles(client, FILES.seed);
     await check(client);
   },
 };

@@ -1,14 +1,23 @@
 import type { Product, ProductInput } from '../../shared/domain/product.js';
+import type { StockLevel } from '../../shared/domain/stock.js';
 import { notFound } from '../http/errors.js';
 import { toProduct, type ProductRow } from './mappers.js';
 import { toHttpError } from './postgrestError.js';
 import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'products';
+const STOCK_TABLE = 'product_stock';
+/**
+ * El stock viaja embebido con el producto: la ficha necesita saber si la
+ * variante elegida sale a pedido antes de que el socio apriete comprar, y una
+ * segunda consulta por producto sería una cascada de requests.
+ */
 const COLUMNS =
-  'id,name,description,image_url,sizes_small,sizes_large,price_small,price_large,colors,size_chart_id,category,is_active,sort_order,created_at,updated_at';
+  'id,name,description,image_url,sizes_small,sizes_large,price_small,price_large,colors,size_chart_id,category,is_active,sort_order,created_at,updated_at,product_stock(size,color,units)';
 
 export interface ProductRepository {
+  /** Reemplaza el stock de un producto por la grilla que mandó el panel. */
+  setStock(id: string, levels: readonly StockLevel[]): Promise<Product>;
   list(options?: { includeInactive?: boolean }): Promise<Product[]>;
   findById(id: string): Promise<Product | null>;
   findManyByIds(ids: string[]): Promise<Map<string, Product>>;
@@ -35,6 +44,31 @@ const toRow = (patch: Partial<ProductInput>): Record<string, unknown> => {
 };
 
 export const productRepository: ProductRepository = {
+  async setStock(id, levels) {
+    const supabase = getSupabase();
+
+    // Se reemplaza la grilla entera: una variante que el club borró de la
+    // pantalla tiene que dejar de existir, no quedar con su último valor.
+    const { error: borrado } = await supabase.from(STOCK_TABLE).delete().eq('product_id', id);
+    if (borrado) throw toHttpError(borrado, 'products.setStock.clear');
+
+    if (levels.length > 0) {
+      const { error } = await supabase.from(STOCK_TABLE).insert(
+        levels.map((level) => ({
+          product_id: id,
+          size: level.size,
+          color: level.color ?? '',
+          units: level.units,
+        })),
+      );
+      if (error) throw toHttpError(error, 'products.setStock');
+    }
+
+    const saved = await productRepository.findById(id);
+    if (!saved) throw notFound(`No existe el producto "${id}".`);
+    return saved;
+  },
+
   async list({ includeInactive = false } = {}) {
     let query = getSupabase().from(TABLE).select(COLUMNS);
     if (!includeInactive) query = query.eq('is_active', true);

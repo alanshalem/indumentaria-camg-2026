@@ -1,6 +1,7 @@
 import { ROUTES, type UploadResponse } from '@shared/api/contracts';
 import type { Product, ProductInput } from '@shared/domain/product';
 import type { ProductImageUploadDto } from '@shared/schemas/product.schema';
+import type { StockLevel } from '@shared/domain/stock';
 import { httpClient } from './httpClient';
 
 /** Lee el archivo como base64 puro, sin el prefijo `data:<mime>;base64,`. */
@@ -20,6 +21,10 @@ export const catalogService = {
     }),
 
   create: (input: ProductInput) => httpClient.post<Product>(ROUTES.products.collection, input),
+
+  /** Reemplaza la grilla de stock del producto. */
+  setStock: (id: string, levels: readonly StockLevel[]) =>
+    httpClient.patch<Product>(ROUTES.products.stock(id), { levels }),
 
   update: (id: string, patch: Partial<ProductInput>) =>
     httpClient.patch<Product>(ROUTES.products.byId(id), patch),

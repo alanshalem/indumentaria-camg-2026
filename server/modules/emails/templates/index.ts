@@ -1,7 +1,8 @@
 import type { EmailConfig } from '../../../config/env.js';
 import { formatPrice } from '../../../../shared/domain/money.js';
 import { CLUB, type ClubInfo } from '../../../../shared/domain/club.js';
-import type { Order } from '../../../../shared/domain/order.js';
+import { hasBackorder, isBackordered, type Order } from '../../../../shared/domain/order.js';
+import { ON_DEMAND_LEAD_TIME } from '../../../../shared/domain/stock.js';
 import type { EmailKind } from '../../../../shared/domain/orderEmails.js';
 import { PAGES } from '../../../../shared/api/contracts.js';
 import { signOrderToken } from '../../../security/orderToken.js';
@@ -32,6 +33,27 @@ export interface TemplateContext {
 }
 
 type Template = (context: TemplateContext) => RenderedEmail;
+
+/**
+ * Aviso de entrega a pedido, cuando alguna prenda no estaba en stock.
+ *
+ * Va como bloque aparte además de la marca en cada línea: el socio tiene que
+ * enterarse del plazo antes de transferir, no leyendo la letra chica del
+ * detalle.
+ */
+const backorderNotice = (order: Order): string =>
+  hasBackorder(order)
+    ? infoBox('Entrega', [
+        ['Plazo', `A pedido, ${ON_DEMAND_LEAD_TIME}`],
+        [
+          'Prendas',
+          order.items
+            .filter(isBackordered)
+            .map((item) => `${item.productName} (${item.size})`)
+            .join(', '),
+        ],
+      ])
+    : '';
 
 /** Link firmado al seguimiento. Sólo lo puede armar el servidor. */
 const statusLink = (order: Order, siteUrl: string) =>
@@ -102,6 +124,8 @@ const orderReceived: Template = ({ order, email, club = CLUB }) => {
         paragraph('Recibimos tu pedido de indumentaria del club. Todavía no está confirmado: falta el pago.'),
         codeBlock(order.code),
         itemsTable(order),
+        // Arriba del pago: que el plazo no sea una sorpresa después de transferir.
+        backorderNotice(order),
         // El recuadro va primero: el texto lo referencia como "el alias de arriba".
         payment,
         paymentHint,

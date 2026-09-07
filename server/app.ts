@@ -3,6 +3,7 @@ import { HttpError, internalError, isHttpError } from './http/errors.js';
 import { Router } from './http/router.js';
 import type { ApiRequest, ApiResponse } from './http/types.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { emailRoutes } from './modules/emails/emails.routes.js';
 import { orderRoutes } from './modules/orders/orders.routes.js';
 import { productRoutes } from './modules/products/products.routes.js';
 import { promotionRoutes } from './modules/promotions/promotions.routes.js';
@@ -14,7 +15,8 @@ export const apiRouter = new Router()
   .use('/', productRoutes)
   .use('/', promotionRoutes)
   .use('/', orderRoutes)
-  .use('/', uploadRoutes);
+  .use('/', uploadRoutes)
+  .use('/', emailRoutes);
 
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',

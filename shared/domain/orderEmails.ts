@@ -36,6 +36,12 @@ export const EMAIL_FOR_STATUS: Partial<Record<OrderStatus, EmailKind>> = {
 export const emailKindForStatus = (status: OrderStatus): EmailKind | null =>
   EMAIL_FOR_STATUS[status] ?? null;
 
+/** El estado que dispara este aviso. Es la inversa de `EMAIL_FOR_STATUS`. */
+export const statusForEmailKind = (kind: EmailKind): OrderStatus | null =>
+  (Object.entries(EMAIL_FOR_STATUS) as [OrderStatus, EmailKind][]).find(
+    ([, value]) => value === kind,
+  )?.[0] ?? null;
+
 /**
  * Qué pasó con un aviso. El admin lo necesita en el momento del cambio: antes,
  * un estado que no manda nada era indistinguible de un envío que falló en

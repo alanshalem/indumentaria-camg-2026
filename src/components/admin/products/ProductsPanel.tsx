@@ -6,6 +6,7 @@ import { catalogService } from '@/services/catalogService';
 import { Alert, Button, Modal, Spinner } from '@/ui';
 import { ProductForm } from './ProductForm';
 import { ProductTable } from './ProductTable';
+import { StockEditor } from './StockEditor';
 import styles from './ProductsPanel.module.css';
 
 const NO_PRODUCTS: Product[] = [];
@@ -14,7 +15,8 @@ const NO_PRODUCTS: Product[] = [];
 type Dialog =
   | { kind: 'none' }
   | { kind: 'form'; product: Product | null }
-  | { kind: 'confirmDelete'; product: Product };
+  | { kind: 'confirmDelete'; product: Product }
+  | { kind: 'stock'; product: Product };
 
 const CLOSED: Dialog = { kind: 'none' };
 
@@ -83,6 +85,7 @@ export function ProductsPanel() {
           products={products}
           busyId={busyId}
           onEdit={(product) => setDialog({ kind: 'form', product })}
+          onStock={(product) => setDialog({ kind: 'stock', product })}
           onToggleActive={(product) => void toggleActive(product)}
           onDelete={(product) => setDialog({ kind: 'confirmDelete', product })}
         />
@@ -102,6 +105,28 @@ export function ProductsPanel() {
               upsert(saved);
               setDialog(CLOSED);
               notify(mode === 'created' ? `"${saved.name}" se creó.` : `"${saved.name}" se actualizó.`);
+            }}
+          />
+        )}
+      </Modal>
+
+      {/* El stock va en su propio diálogo y no dentro del formulario largo:
+          cuando entra mercadería el club recorre productos cargando números,
+          no editando fichas. */}
+      <Modal
+        size="lg"
+        isOpen={dialog.kind === 'stock'}
+        onClose={() => setDialog(CLOSED)}
+        title={dialog.kind === 'stock' ? `Stock · ${dialog.product.name}` : 'Stock'}
+      >
+        {dialog.kind === 'stock' && (
+          <StockEditor
+            product={dialog.product}
+            onCancel={() => setDialog(CLOSED)}
+            onSaved={(saved) => {
+              upsert(saved);
+              setDialog(CLOSED);
+              notify(`Stock de "${saved.name}" actualizado.`);
             }}
           />
         )}

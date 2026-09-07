@@ -72,12 +72,14 @@ describe('teléfono', () => {
     expect(normalizePhone('(011) 4567-8901')).toBe('01145678901');
   });
 
-  it('formatea para leer en el panel', () => {
-    expect(formatPhone('1123456789')).toBe('112 345-6789');
+  it('formatea completo, listo para copiar', () => {
+    expect(formatPhone('1123456789')).toBe('+54 9 11 2345-6789');
   });
 
-  it('arma el link de WhatsApp con código de país', () => {
-    expect(whatsappLink('011 4567-8901')).toBe('https://wa.me/541145678901');
+  it('arma el link de WhatsApp con el 9 de celular', () => {
+    // El 9 no es decorativo: sin el, wa.me no resuelve un celular argentino.
+    // El link viejo salia como 54 11 4567 8901 y no abria el chat.
+    expect(whatsappLink('011 4567-8901')).toBe('https://wa.me/5491145678901');
     expect(whatsappLink('5491145678901')).toBe('https://wa.me/5491145678901');
   });
 });

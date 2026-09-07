@@ -16,6 +16,8 @@ export const ROUTES = {
     collection: '/products',
     byId: (id: string) => `/products/${encodeURIComponent(id)}`,
     pattern: '/products/:id',
+    stock: (id: string) => `/products/${encodeURIComponent(id)}/stock`,
+    stockPattern: '/products/:id/stock',
   },
   promotions: {
     collection: '/promotions',
@@ -32,6 +34,9 @@ export const ROUTES = {
   },
   uploads: {
     productImage: '/uploads/product-image',
+  },
+  emails: {
+    preview: '/emails/preview',
   },
 } as const;
 
@@ -110,4 +115,21 @@ export interface OrderTotals {
   open: number;
   /** Cuántos pedidos entraron en estas cuentas. */
   counted: number;
+}
+
+/**
+ * Un mail renderizado tal como le llega al socio.
+ *
+ * Lo arma el servidor porque las plantillas viven ahí: firman el link de
+ * seguimiento con el secreto, que nunca sale del backend.
+ */
+export interface EmailPreview {
+  kind: EmailKind;
+  subject: string;
+  html: string;
+  text: string;
+  /** A quién le llegaría. Vacío si el pedido no tiene mail cargado. */
+  recipient: string;
+  /** `true` cuando se renderizó con un pedido inventado y no con uno real. */
+  isSample: boolean;
 }

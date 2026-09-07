@@ -3,6 +3,8 @@ import { formatPrice } from '@shared/domain/money';
 import {
   countOrderUnits,
   customerFullName,
+  hasBackorder,
+  isBackordered,
   isCancelled,
   ORDER_STAGES,
   ORDER_STATUS_LABELS,
@@ -13,9 +15,10 @@ import { EMAIL_KIND_LABELS, emailKindForStatus } from '@shared/domain/orderEmail
 import { describeUpdate } from './statusNotice';
 import { OrderEmailHistory } from './OrderEmailHistory';
 import { formatPhone, whatsappLink } from '@shared/domain/phone';
+import { ON_DEMAND_LEAD_TIME } from '@shared/domain/stock';
 import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
-import { formatDateTime } from '@/utils/formatDate';
+import { formatOrderDate } from '@/utils/formatDate';
 import { Alert, Button, EmptyState, Modal } from '@/ui';
 import styles from './OrderTable.module.css';
 
@@ -31,6 +34,10 @@ interface Props {
  * elijo este otro, ¿le llega algo?", y eso no se puede contestar mirando una
  * sola fila.
  */
+/** `CAMG-2026-` — lo que comparten todos los códigos y no distingue ninguno. */
+const codePrefix = (code: string) => code.slice(0, code.lastIndexOf('-') + 1);
+const codeSuffix = (code: string) => code.slice(code.lastIndexOf('-') + 1);
+
 const STATUS_HELP = ORDER_STAGES.map((status) => {
   const kind = emailKindForStatus(status);
   return `${ORDER_STATUS_LABELS[status]} → ${kind ? `mail "${EMAIL_KIND_LABELS[kind]}"` : 'no manda mail'}`;
@@ -130,8 +137,25 @@ export function OrderTable({ orders, onStatusChange }: Props) {
               return (
                 <Fragment key={order.code}>
                   <tr className={styles.row}>
-                    <td className={styles.code}>{order.code}</td>
-                    <td>{formatDateTime(order.timestamp)}</td>
+                    <td className={styles.code}>
+                      {/* El prefijo se repite en todas las filas: se atenúa
+                          para que el ojo vaya a lo que distingue al pedido. */}
+                      <span className={styles.codePrefix}>{codePrefix(order.code)}</span>
+                      {codeSuffix(order.code)}
+                      {/* Que el club vea de un vistazo qué pedidos tienen algo
+                          encargado y no dependa de abrir el detalle. */}
+                      {hasBackorder(order) && (
+                        <span
+                          className={styles.backorder}
+                          title={`Tiene prendas a pedido · entrega ${ON_DEMAND_LEAD_TIME}`}
+                        >
+                          A pedido
+                        </span>
+                      )}
+                    </td>
+                    <td className={styles.date} title={formatOrderDate(order.timestamp).title}>
+                      {formatOrderDate(order.timestamp).label}
+                    </td>
                     <td>{customerFullName(order)}</td>
                     <td>
                       {/* El club cobra por WhatsApp: un click, sin copiar números. */}
@@ -228,6 +252,11 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                               <span className={styles.itemMeta}>
                                 Talle {item.size}
                                 {item.color && ` · ${item.color}`}
+                                {isBackordered(item) && (
+                                  <em className={styles.itemBackorder}>
+                                    {item.backorderedUnits} a pedido · {ON_DEMAND_LEAD_TIME}
+                                  </em>
+                                )}
                               </span>
                               <span className={styles.itemPrice}>
                                 {formatPrice(item.unitPrice * item.quantity)}

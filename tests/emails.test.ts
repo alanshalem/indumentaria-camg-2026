@@ -46,6 +46,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
       color: null,
       quantity: 2,
       unitPrice: 54000,
+      backorderedUnits: 0,
     },
     {
       productId: 'remera-algodon',
@@ -55,6 +56,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
       color: 'Roja',
       quantity: 1,
       unitPrice: 20500,
+      backorderedUnits: 0,
     },
   ],
   subtotal: 128500,
@@ -272,6 +274,7 @@ describe('plantillas de mail', () => {
           color: '"><script>',
           quantity: 1,
           unitPrice: 1000,
+          backorderedUnits: 0,
         },
       ],
       promotions: [],
@@ -465,5 +468,74 @@ describe('missedNoticeKinds', () => {
   it('entregado exige todos los avisos: es el final del recorrido', () => {
     expect(missedNoticeKinds('delivered', [])).toEqual(EMAIL_KINDS);
     expect(missedNoticeKinds('delivered', [...EMAIL_KINDS])).toEqual([]);
+  });
+});
+
+describe('vista previa de las plantillas', () => {
+  const fakeOrders = (existente: Order | null) =>
+    ({
+      findByCode: async () => existente,
+      list: async () => ({ orders: [], total: 0 }),
+      summary: async () => ({ revenue: 0, discounts: 0, open: 0, counted: 0 }),
+      create: async (o: Order) => o,
+      updateStatus: async () => {
+        throw new Error('no usado');
+      },
+    }) as unknown as Parameters<typeof createEmailsService>[2];
+
+  const service = (existente: Order | null = null) => {
+    const { transport } = fakeTransport();
+    const { repository } = fakeLog();
+    return createEmailsService(transport, repository, fakeOrders(existente));
+  };
+
+  it('sin codigo usa el pedido de ejemplo y no manda nada', async () => {
+    const { transport, sent } = fakeTransport();
+    const { repository } = fakeLog();
+    const svc = createEmailsService(transport, repository, fakeOrders(null));
+
+    const preview = await svc.preview('orderReceived', 'pending');
+
+    expect(preview.isSample).toBe(true);
+    expect(preview.subject).toContain('CAMG-2026-EJEMP');
+    expect(preview.html).toContain('<!doctype html>');
+    expect(preview.text.length).toBeGreaterThan(40);
+    // Previsualizar no puede tener efectos: nadie recibe un mail por mirar.
+    expect(sent).toHaveLength(0);
+  });
+
+  it('con un codigo real usa los datos de ese pedido', async () => {
+    const real = order({ code: 'CAMG-2026-ABCDE', customerName: 'Alejandro' });
+
+    const preview = await service(real).preview('readyForPickup', 'ready', real.code);
+
+    expect(preview.isSample).toBe(false);
+    expect(preview.recipient).toBe(real.email);
+    expect(preview.html).toContain('Alejandro');
+  });
+
+  it('fuerza el estado del aviso: un pedido pendiente se ve como si ya estuviera listo', async () => {
+    // Si no, previsualizar "listo para retirar" con un pedido pendiente
+    // mostraria la plantilla con datos de otra etapa.
+    const pendiente = order({ status: 'pending' });
+
+    const preview = await service(pendiente).preview('readyForPickup', 'ready', pendiente.code);
+
+    expect(preview.isSample).toBe(false);
+    expect(preview.subject).toContain('listo para retirar');
+  });
+
+  it('un codigo que no existe es 404, no un ejemplo silencioso', async () => {
+    await expect(service(null).preview('orderReceived', 'pending', 'CAMG-2026-ZZZZZ')).rejects.toMatchObject(
+      { code: 'NOT_FOUND' },
+    );
+  });
+
+  it('hay una vista previa para cada mail que existe', async () => {
+    for (const kind of EMAIL_KINDS) {
+      const preview = await service(null).preview(kind, 'pending');
+      expect(preview.kind).toBe(kind);
+      expect(preview.subject.length).toBeGreaterThan(10);
+    }
   });
 });

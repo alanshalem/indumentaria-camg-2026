@@ -1,5 +1,6 @@
 import { getConfig } from '../../config/env.js';
-import type { Order } from '../../../shared/domain/order.js';
+import type { EmailPreview } from '../../../shared/api/contracts.js';
+import type { Order, OrderStatus } from '../../../shared/domain/order.js';
 import {
   emailKindForStatus,
   missedNoticeKinds,
@@ -11,7 +12,10 @@ import {
   type EmailLogRecord,
   type EmailLogRepository,
 } from '../../infra/emailLogRepository.js';
+import { orderRepository, type OrderRepository } from '../../infra/orderRepository.js';
 import { resendTransport, type EmailTransport } from '../../infra/emailTransport.js';
+import { notFound } from '../../http/errors.js';
+import { sampleOrder } from './sampleOrder.js';
 import { renderOrderEmail } from './templates/index.js';
 
 export interface EmailsService {
@@ -24,11 +28,17 @@ export interface EmailsService {
   missedNotices(order: Order): Promise<EmailKind[]>;
   /** Historial completo, para que el panel pueda mostrar qué se le mandó. */
   history(orderCode: string): Promise<EmailLogRecord[]>;
+  /**
+   * Renderiza una plantilla sin mandar nada. Con `code` usa ese pedido real;
+   * sin él, uno de ejemplo.
+   */
+  preview(kind: EmailKind, status: OrderStatus, code?: string): Promise<EmailPreview>;
 }
 
 export function createEmailsService(
   transport: EmailTransport = resendTransport,
   log: EmailLogRepository = emailLogRepository,
+  orders: OrderRepository = orderRepository,
 ): EmailsService {
   return {
     async notifyStatus(order) {
@@ -38,6 +48,29 @@ export function createEmailsService(
     },
 
     history: (orderCode) => log.history(orderCode),
+
+    async preview(kind, status, code) {
+      // Con un pedido real se ve exactamente lo que recibió ese socio; sin
+      // código, el de ejemplo alcanza para revisar el texto y el diseño.
+      const real = code ? await orders.findByCode(code) : null;
+      if (code && !real) throw notFound(`No existe el pedido ${code}.`);
+
+      // Al pedido real se le fuerza el estado del aviso: si no, previsualizar
+      // "listo para retirar" con un pedido pendiente mostraría otra cosa.
+      const order: Order = real ? { ...real, status } : sampleOrder(status);
+      const { email } = getConfig();
+
+      const rendered = renderOrderEmail(kind, { order, email });
+
+      return {
+        kind,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+        recipient: order.email ?? '',
+        isSample: real === null,
+      };
+    },
 
     async missedNotices(order) {
       try {

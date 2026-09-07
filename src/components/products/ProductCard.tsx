@@ -11,6 +11,7 @@ import {
   type Product,
 } from '@shared/domain/product';
 import { promotionNamesProduct } from '@shared/domain/promotions';
+import { isOnDemand, ON_DEMAND_NOTICE } from '@shared/domain/stock';
 import { productPath } from '@/app/paths';
 import { useCartStore } from '@/store/cartStore';
 import { useCatalogStore } from '@/store/catalogStore';
@@ -39,6 +40,10 @@ export function ProductCard({ product }: { product: Product }) {
   const image = imageForColor(product, color);
 
   const combo = promotions.find((promotion) => promotionNamesProduct(promotion, product.id));
+
+  // Sin stock físico la venta sigue habilitada: cambia el plazo, no la
+  // posibilidad de comprar.
+  const aPedido = Boolean(tier) && isOnDemand(product.stock, size, color);
 
   function handleAdd() {
     if (!tier) return;
@@ -105,6 +110,8 @@ export function ProductCard({ product }: { product: Product }) {
             ariaLabel={`Talles de ${product.name}`}
           />
         </div>
+
+        {aPedido && <p className={styles.onDemand}>{ON_DEMAND_NOTICE}</p>}
 
         <Button block onClick={handleAdd} disabled={!tier} className={styles.cta}>
           {justAdded ? '✓ Agregado' : tier ? 'Agregar al carrito' : 'Elegí un talle'}
