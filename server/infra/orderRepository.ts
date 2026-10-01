@@ -8,7 +8,7 @@ import {
 import type { PaymentMethod } from '../../shared/domain/payment.js';
 import { ORDERS_PAGE_SIZE, type OrderFilters } from '../../shared/schemas/order.schema.js';
 import { notFound } from '../http/errors.js';
-import { toOrder, type OrderRow } from './mappers.js';
+import { toOrder, toOrderRow, type OrderRow } from './mappers.js';
 import { toHttpError } from './postgrestError.js';
 import { getSupabase } from './supabaseClient.js';
 
@@ -143,18 +143,7 @@ export const orderRepository: OrderRepository = {
   async create(order) {
     const { data, error } = await getSupabase()
       .from(TABLE)
-      .insert({
-        code: order.code,
-        customer_name: order.customerName,
-        customer_last_name: order.customerLastName,
-        phone: order.phone,
-        email: order.email,
-        items: order.items,
-        subtotal: order.subtotal,
-        promotions: order.promotions,
-        total: order.total,
-        status: order.status,
-      })
+      .insert(toOrderRow(order))
       .select(COLUMNS)
       .single();
     if (error) throw toHttpError(error, 'orders.create');

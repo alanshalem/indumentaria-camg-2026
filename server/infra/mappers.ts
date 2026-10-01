@@ -94,6 +94,39 @@ const toOrderItem = (item: OrderItem): OrderItem => ({
   delivered: item.delivered ?? false,
 });
 
+/**
+ * Las columnas que se escriben al crear un pedido.
+ *
+ * `created_at` lo pone la base y el resto sale del dominio. Es `Required` a
+ * propósito: si mañana `Order` gana un campo que hay que persistir, agregarlo
+ * acá es obligatorio y el compilador lo exige en `toOrderRow`.
+ */
+export type OrderInsert = Required<Omit<OrderRow, 'created_at'>>;
+
+/**
+ * Dominio → fila, la dirección que faltaba.
+ *
+ * El `insert` estaba escrito a mano columna por columna y se olvidó de
+ * `payment_method`: el servicio lo seteaba, el repositorio lo tiraba y el
+ * pedido quedaba "Sin definir" sin que nada fallara. Con el mapper tipado, un
+ * campo nuevo en `Order` rompe la compilación hasta que se decide qué hacer
+ * con él.
+ */
+export const toOrderRow = (order: Order): OrderInsert => ({
+  code: order.code,
+  customer_name: order.customerName,
+  customer_last_name: order.customerLastName,
+  phone: order.phone,
+  email: order.email,
+  items: order.items,
+  subtotal: order.subtotal,
+  promotions: order.promotions,
+  total: order.total,
+  status: order.status,
+  payment_method: order.paymentMethod,
+  payment_link: order.paymentLink,
+});
+
 export const toOrder = (row: OrderRow): Order => ({
   code: row.code,
   timestamp: new Date(row.created_at).getTime(),
