@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { PAGES, type OrderCreated } from '@shared/api/contracts';
 import { CLUB } from '@shared/domain/club';
 import { countOrderUnits, customerFullName } from '@shared/domain/order';
-import { formatPrice } from '@shared/domain/money';
-import { paymentLinkFor } from '@shared/domain/whatsapp';
+import { PayWithMercadoPago } from './PayWithMercadoPago';
 import { formatDateTime } from '@/utils/formatDate';
 import { Button } from '@/ui';
 import { CartSummary } from '@/components/cart/CartSummary';
@@ -85,14 +84,7 @@ export function OrderConfirmation({
 
       {/* Lo que el socio tiene que hacer ahora, según lo que eligió. */}
       {order.paymentMethod === 'mercadopago' ? (
-        <a
-          href={paymentLinkFor(order)}
-          target="_blank"
-          rel="noreferrer"
-          className={styles.pay}
-        >
-          Pagar con Mercado Pago · {formatPrice(order.total)}
-        </a>
+        <PayWithMercadoPago order={order} />
       ) : (
         order.paymentMethod === 'cash' && (
           <p className={styles.payNote}>

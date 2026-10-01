@@ -1,6 +1,11 @@
 import { useCallback } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { countOrderUnits, customerFullName, type PublicOrder } from '@shared/domain/order';
+import {
+  countOrderUnits,
+  customerFullName,
+  isOpenOrder,
+  type PublicOrder,
+} from '@shared/domain/order';
 import { formatPrice } from '@shared/domain/money';
 import { CLUB } from '@shared/domain/club';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
@@ -9,6 +14,7 @@ import { orderService } from '@/services/orderService';
 import { formatDateTime } from '@/utils/formatDate';
 import { CartSummary } from '@/components/cart/CartSummary';
 import { OrderTimeline } from '@/components/checkout/OrderTimeline';
+import { PayWithMercadoPago } from '@/components/checkout/PayWithMercadoPago';
 import { Spinner } from '@/ui';
 import styles from './OrderStatusPage.module.css';
 
@@ -110,6 +116,15 @@ export function OrderStatusPage() {
             />
           </div>
         </section>
+
+        {/* El socio que vuelve desde el mail tiene que poder pagar acá mismo,
+            sin buscar el mensaje otra vez. */}
+        {order.paymentMethod === 'mercadopago' && isOpenOrder(order.status) && (
+          <section className={styles.card} aria-label="Pago">
+            <h2 className={styles.sectionTitle}>Pagar</h2>
+            <PayWithMercadoPago order={order} />
+          </section>
+        )}
 
         {hasPickupInfo && (
           <section className={styles.card} aria-label="Datos del club">
