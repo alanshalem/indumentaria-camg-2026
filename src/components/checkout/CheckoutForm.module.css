@@ -162,3 +162,84 @@
   font-size: 0.8rem;
   color: var(--color-muted);
 }
+
+/* --- Forma de pago -------------------------------------------------------------- */
+
+.payment {
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paymentLegend {
+  padding: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.paymentOptions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+/* Dos opciones grandes y no un desplegable: en el celular se elige de un toque
+   y se ve qué implica cada una sin abrir nada. */
+.paymentOption {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.paymentOption:hover {
+  border-color: var(--color-red);
+}
+
+.paymentOption input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  grid-row: span 2;
+  accent-color: var(--color-red);
+  cursor: pointer;
+}
+
+.paymentOn {
+  border-color: var(--color-red);
+  background: rgba(220, 20, 60, 0.12);
+}
+
+.paymentName {
+  font-size: 0.93rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.paymentOn .paymentName {
+  color: var(--color-white);
+}
+
+.paymentHint {
+  grid-column: 2;
+  font-size: 0.79rem;
+  line-height: 1.35;
+  color: var(--color-muted);
+}
+
+.paymentError {
+  font-size: 0.8rem;
+  color: #ff8a8a;
+}

@@ -102,3 +102,31 @@
   background: rgba(220, 20, 60, 0.12);
   text-decoration: none;
 }
+
+/* El paso siguiente del socio, según lo que eligió en el checkout. */
+.pay {
+  display: block;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-red);
+  color: var(--color-white);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.pay:hover {
+  background: var(--color-red-dark);
+  text-decoration: none;
+}
+
+.payNote {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.payNote strong {
+  color: var(--color-text);
+}

@@ -3,6 +3,7 @@ import { formatPrice } from '../../../../shared/domain/money.js';
 import { CLUB, type ClubInfo } from '../../../../shared/domain/club.js';
 import { hasBackorder, isBackordered, type Order } from '../../../../shared/domain/order.js';
 import { ON_DEMAND_LEAD_TIME } from '../../../../shared/domain/stock.js';
+import { MISSING_PAYMENT_LINK, paymentLinkFor } from '../../../../shared/domain/whatsapp.js';
 import type { EmailKind } from '../../../../shared/domain/orderEmails.js';
 import { PAGES } from '../../../../shared/api/contracts.js';
 import { signOrderToken } from '../../../security/orderToken.js';
@@ -98,21 +99,44 @@ const plainText = (lines: readonly string[]): string =>
 // ---------------------------------------------------------------------------
 
 const orderReceived: Template = ({ order, email, club = CLUB }) => {
-  const payment = club.paymentAlias
+  const link = paymentLinkFor(order, club);
+  const esMercadoPago = order.paymentMethod === 'mercadopago';
+  const esEfectivo = order.paymentMethod === 'cash';
+
+  // El socio ya eligió cómo paga en el checkout: el mail le dice exactamente
+  // eso y no "en breve te contactamos", que era lo único que se podía decir
+  // cuando el método no se sabía.
+  const payment = esMercadoPago
     ? infoBox('Cómo pagar', [
-        ['Alias', club.paymentAlias],
         ['Importe', formatPrice(order.total)],
         ['Referencia', order.code],
       ])
-    : '';
+    : club.paymentAlias
+      ? infoBox('Cómo pagar', [
+          ['Alias', club.paymentAlias],
+          ['Importe', formatPrice(order.total)],
+          ['Referencia', order.code],
+        ])
+      : '';
 
-  const paymentHint = club.paymentAlias
-    ? paragraph(
-        `Para confirmar el pedido, transferí <strong>${escapeHtml(formatPrice(order.total))}</strong> al alias de arriba y ponés <strong>${escapeHtml(order.code)}</strong> como referencia. Cuando se acredite te avisamos por mail.`,
-      )
-    : paragraph(
-        'En breve te contactamos por WhatsApp para pasarte los datos de pago. Cuando se acredite, te avisamos por mail.',
-      );
+  const paymentHint = esMercadoPago
+    ? [
+        paragraph(
+          `Elegiste pagar con Mercado Pago. Entrá al link, poné <strong>${escapeHtml(formatPrice(order.total))}</strong> y mandanos el comprobante por WhatsApp.`,
+        ),
+        link === MISSING_PAYMENT_LINK ? '' : button('Pagar con Mercado Pago', link),
+      ].join('\n')
+    : esEfectivo
+      ? paragraph(
+          'Elegiste pagar en efectivo en la sede del club. Acercate en los horarios de abajo y cuando lo abones te confirmamos el pedido por mail.',
+        )
+      : club.paymentAlias
+        ? paragraph(
+            `Para confirmar el pedido, transferí <strong>${escapeHtml(formatPrice(order.total))}</strong> al alias de arriba y ponés <strong>${escapeHtml(order.code)}</strong> como referencia. Cuando se acredite te avisamos por mail.`,
+          )
+        : paragraph(
+            'En breve te contactamos por WhatsApp para pasarte los datos de pago. Cuando se acredite, te avisamos por mail.',
+          );
 
   return {
     subject: `Recibimos tu pedido ${order.code} · CAMG`,
@@ -145,9 +169,13 @@ const orderReceived: Template = ({ order, email, club = CLUB }) => {
       'TU PEDIDO',
       itemsText(order),
       '',
-      club.paymentAlias
-        ? `Para confirmarlo, transferí ${formatPrice(order.total)} al alias ${club.paymentAlias} usando ${order.code} como referencia.`
-        : 'En breve te contactamos por WhatsApp para pasarte los datos de pago.',
+      esMercadoPago
+        ? `Elegiste Mercado Pago. Pagá ${formatPrice(order.total)} acá: ${link}`
+        : esEfectivo
+          ? 'Elegiste pagar en efectivo en la sede del club, en los horarios de abajo.'
+          : club.paymentAlias
+            ? `Para confirmarlo, transferí ${formatPrice(order.total)} al alias ${club.paymentAlias} usando ${order.code} como referencia.`
+            : 'En breve te contactamos por WhatsApp para pasarte los datos de pago.',
       '',
       'DÓNDE SE RETIRA',
       ...pickupText(club),

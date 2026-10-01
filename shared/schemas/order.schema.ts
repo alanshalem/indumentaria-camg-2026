@@ -58,6 +58,11 @@ export const createOrderSchema = z.object({
   customerLastName: personName('el apellido'),
   phone: phoneSchema,
   email: emailSchema,
+  /**
+   * Lo elige el socio y no el club: el admin no tiene cómo adivinar con qué va
+   * a pagar. Después se puede corregir desde el panel si el socio se equivocó.
+   */
+  paymentMethod: z.enum(PAYMENT_METHODS, 'Elegí cómo vas a pagar'),
   items: z
     .array(orderItemInputSchema, 'Falta el detalle del pedido')
     .min(1, 'El carrito está vacío')

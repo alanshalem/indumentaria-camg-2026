@@ -1,6 +1,11 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import type { OrderCreated } from '@shared/api/contracts';
 import { CLUB } from '@shared/domain/club';
+import {
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
+  type PaymentMethod,
+} from '@shared/domain/payment';
 import { formatPrice } from '@shared/domain/money';
 import type { PromotionOutcome } from '@shared/domain/promotions';
 import { suggestEmailFix } from '@shared/domain/emailSuggestion';
@@ -20,6 +25,12 @@ interface Props {
   onComplete: (created: OrderCreated) => void;
 }
 
+/** Qué implica cada forma de pago, contado desde el lado del socio. */
+const PAYMENT_HINTS: Record<PaymentMethod, string> = {
+  mercadopago: 'Te pasamos el link y nos mandás el comprobante.',
+  cash: 'Lo abonás en la sede del club al retirar.',
+};
+
 export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
   const lines = useCartStore((state) => state.lines);
   const clear = useCartStore((state) => state.clear);
@@ -29,6 +40,9 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [emailConfirm, setEmailConfirm] = useState('');
+  // Sin opción marcada por defecto: elegir cómo pagar es una decisión del
+  // socio, y preseleccionar una la toma por él.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -46,6 +60,7 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
       customerLastName,
       phone,
       email,
+      paymentMethod,
       items: toOrderItems(lines),
     });
 
@@ -188,6 +203,35 @@ export function CheckoutForm({ outcome, onBack, onComplete }: Props) {
         hint="Si te equivocás no hay forma de avisarte: revisalo bien."
         required
       />
+
+      {/* Lo elige el socio: el club no tiene cómo saber con qué va a pagar.
+          Se puede corregir después desde el panel. */}
+      <fieldset className={styles.payment}>
+        <legend className={styles.paymentLegend}>¿Cómo vas a pagar? *</legend>
+
+        <div className={styles.paymentOptions}>
+          {PAYMENT_METHODS.map((method) => (
+            <label
+              key={method}
+              className={`${styles.paymentOption} ${paymentMethod === method ? styles.paymentOn : ''}`}
+            >
+              <input
+                type="radio"
+                name="paymentMethod"
+                value={method}
+                checked={paymentMethod === method}
+                onChange={() => setPaymentMethod(method)}
+              />
+              <span className={styles.paymentName}>{PAYMENT_METHOD_LABELS[method]}</span>
+              <span className={styles.paymentHint}>{PAYMENT_HINTS[method]}</span>
+            </label>
+          ))}
+        </div>
+
+        {fieldErrors['paymentMethod'] && (
+          <span className={styles.paymentError}>{fieldErrors['paymentMethod']}</span>
+        )}
+      </fieldset>
 
       <Alert>{formError}</Alert>
 

@@ -120,6 +120,8 @@ export interface CreateOrderInput {
   phone: string;
   /** Obligatorio: por acá viajan el código, el pago y el aviso de retiro. */
   email: string;
+  /** Cómo elige pagar el socio. El club lo puede corregir después. */
+  paymentMethod: PaymentMethod;
   items: OrderItemInput[];
 }
 

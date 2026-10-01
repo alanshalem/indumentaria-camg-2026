@@ -104,8 +104,10 @@ export function createOrdersService(
           promotions: outcome.discounts,
           total: outcome.total,
           status: 'pending',
-          // El club los registra después, cuando contacta al socio para cobrar.
-          paymentMethod: null,
+          // Lo eligió el socio en el checkout; el club lo puede corregir.
+          paymentMethod: input.paymentMethod,
+          // El del club alcanza para cobrar: sólo se carga uno propio cuando se
+          // genera un cobro con el monto exacto.
           paymentLink: null,
         };
         try {

@@ -39,6 +39,7 @@ const CUSTOMER = {
   customerLastName: 'Pérez',
   phone: '1123456789',
   email: 'ana@ejemplo.com',
+  paymentMethod: 'mercadopago' as const,
 };
 
 /** Doble en memoria: el servicio no sabe si detrás hay Postgres o un Map. */
@@ -649,7 +650,7 @@ describe('entrega parcial · control interno', () => {
 });
 
 describe('metodo de pago', () => {
-  it('nace sin definir: lo registra el club al cobrar', async () => {
+  const crear = (paymentMethod: 'cash' | 'mercadopago') => {
     const service = createOrdersService(
       fakeOrders(),
       fakeProducts([product()]),
@@ -657,12 +658,23 @@ describe('metodo de pago', () => {
       fakeEmails(),
     );
 
-    const { order } = await service.create({
+    return service.create({
       ...CUSTOMER,
+      paymentMethod,
       items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
     });
+  };
 
-    expect(order.paymentMethod).toBeNull();
+  it('guarda el que eligio el socio en el checkout', async () => {
+    // El club no puede adivinar con que va a pagar: lo elige el socio y el
+    // panel lo corrige si se equivoco.
+    expect((await crear('cash')).order.paymentMethod).toBe('cash');
+    expect((await crear('mercadopago')).order.paymentMethod).toBe('mercadopago');
+  });
+
+  it('nace sin link propio: alcanza con el generico del club', async () => {
+    const { order } = await crear('mercadopago');
+
     expect(order.paymentLink).toBeNull();
   });
 });

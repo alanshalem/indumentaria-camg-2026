@@ -10,11 +10,24 @@ describe('createOrderSchema', () => {
     customerLastName: 'Pérez',
     phone: '11 2345-6789',
     email: 'ana@ejemplo.com',
+    paymentMethod: 'mercadopago',
     items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
   };
 
   it('acepta un pedido válido', () => {
     expect(createOrderSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('exige elegir forma de pago: el club no puede adivinarla', () => {
+    const { paymentMethod: _sin, ...faltante } = valid;
+    expect(createOrderSchema.safeParse(faltante).success).toBe(false);
+    expect(createOrderSchema.safeParse({ ...valid, paymentMethod: 'bitcoin' }).success).toBe(false);
+  });
+
+  it('acepta las dos formas que maneja el club', () => {
+    for (const method of ['cash', 'mercadopago']) {
+      expect(createOrderSchema.safeParse({ ...valid, paymentMethod: method }).success).toBe(true);
+    }
   });
 
   it('recorta espacios y normaliza el teléfono a dígitos', () => {
