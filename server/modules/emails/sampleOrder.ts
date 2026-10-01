@@ -28,6 +28,7 @@ export const sampleOrder = (status: OrderStatus): Order => ({
       quantity: 1,
       unitPrice: 54000,
       backorderedUnits: 0,
+      delivered: false,
     },
     {
       productId: 'remera-algodon',
@@ -39,6 +40,7 @@ export const sampleOrder = (status: OrderStatus): Order => ({
       unitPrice: 20500,
       // Una línea a pedido: el ejemplo muestra cómo se ve el aviso de plazo.
       backorderedUnits: 1,
+      delivered: false,
     },
   ],
   subtotal: 95000,
@@ -53,4 +55,6 @@ export const sampleOrder = (status: OrderStatus): Order => ({
   ],
   total: 92950,
   status,
+  paymentMethod: null,
+  paymentLink: null,
 });

@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { ORDER_STATUSES } from '../domain/order.js';
 import { ORDER_CODE_PATTERN } from '../domain/orderCode.js';
 import { normalizeName } from '../domain/name.js';
+import { PAYMENT_METHODS } from '../domain/payment.js';
+import { WHATSAPP_TEMPLATES } from '../domain/whatsapp.js';
 import { isValidPhone, normalizePhone } from '../domain/phone.js';
 
 export const MAX_UNITS_PER_LINE = 50;
@@ -64,6 +66,34 @@ export const createOrderSchema = z.object({
 
 export const orderStatusSchema = z.enum(ORDER_STATUSES);
 
+/** Marcar una línea como entregada. Control interno: no manda ningún mail. */
+export const deliverItemSchema = z.object({
+  index: z.coerce.number().int().min(0).max(MAX_LINES_PER_ORDER),
+  delivered: z.boolean(),
+});
+
+/**
+ * El link de cobro se guarda tal como lo pega el club. Se valida que sea una
+ * URL para no mandarle al socio un mensaje con basura adentro.
+ */
+export const orderPaymentSchema = z.object({
+  method: z.enum(PAYMENT_METHODS).nullable().default(null),
+  link: z
+    .string()
+    .trim()
+    .max(500)
+    .nullable()
+    .default(null)
+    .refine(
+      (value) => !value || /^https?:\/\//i.test(value),
+      'El link tiene que empezar con http:// o https://',
+    ),
+});
+
+export const whatsappTemplateSchema = z.object({
+  template: z.enum(WHATSAPP_TEMPLATES),
+});
+
 export const updateOrderSchema = z.object({
   status: orderStatusSchema,
 });
@@ -92,6 +122,8 @@ export const orderQuerySchema = z.object({
 
 export type CreateOrderDto = z.infer<typeof createOrderSchema>;
 export type UpdateOrderDto = z.infer<typeof updateOrderSchema>;
+export type DeliverItemDto = z.infer<typeof deliverItemSchema>;
+export type OrderPaymentDto = z.infer<typeof orderPaymentSchema>;
 export type OrderQueryDto = z.infer<typeof orderQuerySchema>;
 
 /** Lo que manda el cliente: `limit` y `offset` los completa el esquema. */

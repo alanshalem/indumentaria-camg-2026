@@ -80,17 +80,41 @@
   flex-direction: column;
   gap: 6px;
 }
+/* Los datos de la prenda a la izquierda, el importe y la marca a la derecha.
+   Antes el grid tenía cuatro columnas fijas y el checkbox entró como quinto
+   elemento: todo se corrió una posición y el nombre terminaba a la derecha. */
 .detailList li {
   display: grid;
-  grid-template-columns: 40px 1fr auto auto;
-  gap: 12px;
-  align-items: baseline;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
   font-size: 0.9rem;
 }
-.itemQty { font-weight: 800; color: var(--color-red-bright); }
+
+.itemQty {
+  font-weight: 800;
+  color: var(--color-red-bright);
+  font-variant-numeric: tabular-nums;
+}
+
+.itemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .itemName { color: var(--color-white); font-weight: 600; }
-.itemMeta { color: var(--color-muted); font-size: 0.84rem; }
-.itemPrice { color: var(--color-white); font-weight: 700; }
+.itemMeta { color: var(--color-muted); font-size: 0.82rem; }
+.itemPrice {
+  color: var(--color-white);
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 
 .empty {
   text-align: center;
@@ -342,9 +366,6 @@
 }
 
 .itemBackorder {
-  display: block;
-  margin-top: 2px;
-  font-style: normal;
   font-size: 0.75rem;
   font-weight: 600;
   color: #fbbf24;
@@ -359,4 +380,126 @@
 .date {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* --- Método de pago ----------------------------------------------------------- */
+
+.paymentSelect {
+  width: auto;
+  min-width: 132px;
+  padding: 6px 26px 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface-2);
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%239a9a9a' stroke-width='1.8'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+
+.paymentSelect.cash {
+  border-color: rgba(35, 165, 90, 0.5);
+  color: #7ee2a8;
+}
+
+.paymentSelect.mercadopago {
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #93c5fd;
+}
+
+.paymentSelect option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* --- WhatsApp ------------------------------------------------------------------ */
+
+.whatsapp {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #25d366;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.whatsapp:hover:not(:disabled) {
+  background: rgba(37, 211, 102, 0.14);
+  border-color: rgba(37, 211, 102, 0.6);
+}
+
+.whatsapp:disabled { opacity: 0.4; }
+
+/* --- Entrega parcial ------------------------------------------------------------ */
+
+/* Un chip con texto y no un checkbox pelado: sin la palabra al lado, nadie
+   sabe qué marca esa casilla. Además da un área de click decente. */
+.deliverBox {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.deliverBox:hover {
+  border-color: rgba(35, 165, 90, 0.6);
+  color: var(--color-text);
+}
+
+.deliverBox input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #23a55a;
+  cursor: pointer;
+}
+
+.deliverOn {
+  border-color: rgba(35, 165, 90, 0.55);
+  background: rgba(35, 165, 90, 0.14);
+  color: #7ee2a8;
+}
+
+/* La prenda entregada se atenúa: lo que queda pendiente salta a la vista. */
+.itemDone .itemName,
+.itemDone .itemPrice {
+  opacity: 0.5;
+  text-decoration: line-through;
+  text-decoration-color: rgba(126, 226, 168, 0.7);
+}
+
+.itemDone .itemMeta { opacity: 0.5; }
+
+.partial {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(35, 165, 90, 0.16);
+  border: 1px solid rgba(35, 165, 90, 0.45);
+  color: #7ee2a8;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  vertical-align: middle;
 }

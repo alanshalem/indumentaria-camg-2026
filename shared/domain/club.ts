@@ -29,6 +29,14 @@ export interface ClubInfo {
   pickupHours: readonly string[];
   /** WhatsApp de contacto del club. */
   contactPhone: string;
+  /**
+   * Link de cobro de Mercado Pago del club.
+   *
+   * Es genérico y sin monto: el socio entra y paga lo que le corresponde. Por
+   * eso vive acá y no en cada pedido. Un pedido puede igual tener el suyo
+   * —con el monto ya cargado— y ese le gana a éste.
+   */
+  paymentLink: string;
   instagram: string;
   instagramUrl: string;
 }
@@ -37,10 +45,12 @@ export const CLUB: ClubInfo = {
   name: 'Club Atlético Monte Grande',
   shortName: 'CAMG',
 
-  // TODO(club): falta el alias de pago y el WhatsApp. Hasta que estén, el mail
-  // omite esos recuadros en vez de mostrar una etiqueta sin valor.
+  // TODO(club): falta el alias de transferencia. Hasta que esté, el mail omite
+  // ese recuadro en vez de mostrar una etiqueta sin valor.
   paymentAlias: '',
-  contactPhone: '',
+
+  contactPhone: '+54 9 11 3146-0477',
+  paymentLink: 'https://link.mercadopago.com.ar/indumentariacamg',
 
   pickupAddress: 'Hipólito Yrigoyen 77, Monte Grande, Argentina',
   pickupHours: ['Lunes, miércoles y viernes de 18 a 19', 'Martes y jueves de 17 a 18'],
@@ -57,6 +67,7 @@ export const missingClubInfo = (club: ClubInfo = CLUB): string[] =>
       ['dirección de retiro', club.pickupAddress.trim().length > 0],
       ['horarios de retiro', club.pickupHours.length > 0],
       ['teléfono de contacto', club.contactPhone.trim().length > 0],
+      ['link de pago', club.paymentLink.trim().length > 0],
     ] as const
   )
     .filter(([, loaded]) => !loaded)

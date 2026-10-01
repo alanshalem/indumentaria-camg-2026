@@ -15,6 +15,8 @@ const order = (status: Order['status']): Order => ({
   promotions: [],
   total: 0,
   status,
+  paymentMethod: null,
+  paymentLink: null,
 });
 
 const update = (partial: Partial<OrderStatusUpdate> & Pick<OrderStatusUpdate, 'order'>) => ({

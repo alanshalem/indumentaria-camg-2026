@@ -1,0 +1,126 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: min(540px, 82vw);
+}
+
+.to {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.to strong {
+  color: var(--color-text);
+}
+
+.templates {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid #25d366;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--color-surface-2);
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.cardHint {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.sent,
+.notSent {
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.sent {
+  color: #7ee2a8;
+}
+
+.notSent {
+  color: var(--color-muted);
+}
+
+.linkRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.linkInput {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.warn {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #fbbf24;
+}
+
+.previewToggle {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+}
+
+.previewToggle:hover {
+  color: var(--color-white);
+}
+
+/* El texto exacto que va a quedar en el chat, sin reformatear. */
+.preview {
+  margin: 0;
+  padding: 12px 14px;
+  max-height: 220px;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--color-muted);
+}

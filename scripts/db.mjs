@@ -26,6 +26,7 @@ const FILES = {
     'db/migrations/0004_promo_scope.sql',
     'db/migrations/0005_order_deposit_and_cancel.sql',
     'db/migrations/0006_stock.sql',
+    'db/migrations/0007_payment_and_whatsapp.sql',
   ],
   seed: ['db/seed.sql'],
 };

@@ -48,6 +48,7 @@ const sampleOrder = (email: string): Order => ({
       quantity: 1,
       unitPrice: 45500,
       backorderedUnits: 0,
+      delivered: false,
     },
     {
       productId: 'pantalon-con-cierre',
@@ -58,6 +59,7 @@ const sampleOrder = (email: string): Order => ({
       quantity: 1,
       unitPrice: 48500,
       backorderedUnits: 0,
+      delivered: false,
     },
   ],
   subtotal: 94000,
@@ -72,6 +74,8 @@ const sampleOrder = (email: string): Order => ({
   ],
   total: 85000,
   status: 'pending',
+  paymentMethod: null,
+  paymentLink: null,
 });
 
 // ---------------------------------------------------------------------------

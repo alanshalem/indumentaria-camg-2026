@@ -1,6 +1,7 @@
 import type { Order, OrderItem, OrderStatus } from '../../shared/domain/order.js';
 import { isProductCategory, type Product, type ProductColor } from '../../shared/domain/product.js';
 import type { AppliedPromotion, PromotionDefinition, PromotionKind } from '../../shared/domain/promotions.js';
+import { isPaymentMethod } from '../../shared/domain/payment.js';
 import { isSizeChartId } from '../../shared/domain/sizeCharts.js';
 
 /** Filas crudas de Postgres. snake_case vive sólo acá. */
@@ -41,6 +42,8 @@ export interface OrderRow {
   promotions: AppliedPromotion[] | null;
   total: number | null;
   status: string | null;
+  payment_method: string | null;
+  payment_link: string | null;
   created_at: string;
 }
 
@@ -84,10 +87,11 @@ export const toProduct = (row: ProductRow): Product => ({
   updatedAt: row.updated_at,
 });
 
-/** Los pedidos anteriores al inventario no tienen el campo: entrega normal. */
+/** Los pedidos viejos no tienen los campos nuevos: valores neutros. */
 const toOrderItem = (item: OrderItem): OrderItem => ({
   ...item,
   backorderedUnits: item.backorderedUnits ?? 0,
+  delivered: item.delivered ?? false,
 });
 
 export const toOrder = (row: OrderRow): Order => ({
@@ -102,6 +106,9 @@ export const toOrder = (row: OrderRow): Order => ({
   promotions: row.promotions ?? [],
   total: row.total ?? 0,
   status: (row.status as OrderStatus) ?? 'pending',
+  // Un valor desconocido no rompe la tabla: queda como "sin definir".
+  paymentMethod: isPaymentMethod(row.payment_method) ? row.payment_method : null,
+  paymentLink: row.payment_link,
 });
 
 export const toPromotion = (row: PromotionRow): PromotionDefinition => ({

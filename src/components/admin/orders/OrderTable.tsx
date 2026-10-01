@@ -3,7 +3,9 @@ import { formatPrice } from '@shared/domain/money';
 import {
   countOrderUnits,
   customerFullName,
+  deliveredCount,
   hasBackorder,
+  isPartiallyDelivered,
   isBackordered,
   isCancelled,
   ORDER_STAGES,
@@ -16,6 +18,13 @@ import { describeUpdate } from './statusNotice';
 import { OrderEmailHistory } from './OrderEmailHistory';
 import { formatPhone, whatsappLink } from '@shared/domain/phone';
 import { ON_DEMAND_LEAD_TIME } from '@shared/domain/stock';
+import {
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
+  paymentMethodLabel,
+  type PaymentMethod,
+} from '@shared/domain/payment';
+import { WhatsappDialog } from './WhatsappDialog';
 import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
 import { formatOrderDate } from '@/utils/formatDate';
@@ -51,6 +60,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
   // Eliminar es destructivo y la fila es angosta: se confirma en un diálogo
   // que dice de qué pedido se trata.
   const [confirming, setConfirming] = useState<Order | null>(null);
+  const [messaging, setMessaging] = useState<Order | null>(null);
 
   async function changeStatus(order: Order, status: OrderStatus) {
     if (status === order.status) return;
@@ -73,6 +83,36 @@ export function OrderTable({ orders, onStatusChange }: Props) {
     }
   }
 
+  /**
+   * Marca una prenda como entregada. A diferencia del estado, esto **no manda
+   * ningún mail**: es control interno del club para los pedidos que se
+   * entregan en partes.
+   */
+  async function changeDelivered(order: Order, index: number, delivered: boolean) {
+    setError('');
+    setPendingCode(order.code);
+    try {
+      onStatusChange(await orderService.setItemDelivered(order.code, index, delivered));
+    } catch (caught) {
+      setError(errorMessage(caught, 'No se pudo marcar la prenda.'));
+    } finally {
+      setPendingCode(null);
+    }
+  }
+
+  async function changePayment(order: Order, method: PaymentMethod | null) {
+    setError('');
+    setPendingCode(order.code);
+    try {
+      // El link se conserva: cambiar a efectivo y volver no lo borra.
+      onStatusChange(await orderService.setPayment(order.code, { method, link: order.paymentLink }));
+    } catch (caught) {
+      setError(errorMessage(caught, 'No se pudo guardar el método de pago.'));
+    } finally {
+      setPendingCode(null);
+    }
+  }
+
   if (orders.length === 0) {
     return <EmptyState title="No hay pedidos que coincidan con los filtros." />;
   }
@@ -81,6 +121,23 @@ export function OrderTable({ orders, onStatusChange }: Props) {
     <>
       {notice && <Alert tone="success">{notice}</Alert>}
       {error && <Alert>{error}</Alert>}
+
+      <Modal
+        size="lg"
+        isOpen={messaging !== null}
+        onClose={() => setMessaging(null)}
+        title={messaging ? `Mensajes · ${customerFullName(messaging)}` : 'Mensajes'}
+      >
+        {messaging && (
+          <WhatsappDialog
+            order={messaging}
+            onOrderChange={(updated) => {
+              onStatusChange(updated);
+              setMessaging(updated);
+            }}
+          />
+        )}
+      </Modal>
 
       <Modal
         isOpen={confirming !== null}
@@ -126,6 +183,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
               <th>Contacto</th>
               <th className={styles.right}>Items</th>
               <th className={styles.right}>Total</th>
+              <th>Pago</th>
               <th>Estado</th>
               <th />
             </tr>
@@ -152,6 +210,16 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                           A pedido
                         </span>
                       )}
+                      {/* Entregado a medias: es el dato que el club pierde de
+                          vista si sólo mira el estado del pedido. */}
+                      {isPartiallyDelivered(order) && (
+                        <span
+                          className={styles.partial}
+                          title="Hay prendas entregadas y prendas pendientes"
+                        >
+                          {deliveredCount(order)}/{order.items.length} entregado
+                        </span>
+                      )}
                     </td>
                     <td className={styles.date} title={formatOrderDate(order.timestamp).title}>
                       {formatOrderDate(order.timestamp).label}
@@ -176,6 +244,25 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                     <td className={styles.right}>
                       {formatPrice(order.total)}
                       {saved > 0 && <span className={styles.saved}>−{formatPrice(saved)}</span>}
+                    </td>
+                    <td>
+                      <select
+                        className={`${styles.paymentSelect} ${order.paymentMethod ? styles[order.paymentMethod] : ''}`}
+                        value={order.paymentMethod ?? ''}
+                        disabled={pendingCode === order.code}
+                        onChange={(event) =>
+                          void changePayment(order, (event.target.value || null) as PaymentMethod | null)
+                        }
+                        aria-label={`Método de pago del pedido ${order.code}`}
+                        title={`Cómo paga el socio: ${paymentMethodLabel(order.paymentMethod)}`}
+                      >
+                        <option value="">Sin definir</option>
+                        {PAYMENT_METHODS.map((method) => (
+                          <option key={method} value={method}>
+                            {PAYMENT_METHOD_LABELS[method]}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>
                       {/* Un pedido eliminado no está en ninguna etapa: en vez
@@ -205,6 +292,20 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                     </td>
                     <td>
                       <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.whatsapp}
+                          onClick={() => setMessaging(order)}
+                          disabled={pendingCode === order.code}
+                          title={`Mandarle un mensaje a ${customerFullName(order)}`}
+                          aria-label={`Mensajes de WhatsApp para ${order.code}`}
+                        >
+                          <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                            <path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.5-.5c.1-.2.2-.3.3-.5 0-.2 0-.4-.1-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.4z" />
+                            <path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.1-1.3A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-3-.2-.3A8.2 8.2 0 1 1 12 20.2z" />
+                          </svg>
+                        </button>
+
                         <button
                           type="button"
                           className={styles.expand}
@@ -243,24 +344,49 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                   </tr>
                   {isOpen && (
                     <tr className={styles.detailRow}>
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <ul className={styles.detailList}>
                           {order.items.map((item, index) => (
-                            <li key={`${order.code}-${item.productId}-${item.size}-${index}`}>
+                            <li
+                              key={`${order.code}-${item.productId}-${item.size}-${index}`}
+                              className={item.delivered ? styles.itemDone : undefined}
+                            >
                               <span className={styles.itemQty}>{item.quantity}×</span>
-                              <span className={styles.itemName}>{item.productName}</span>
-                              <span className={styles.itemMeta}>
-                                Talle {item.size}
-                                {item.color && ` · ${item.color}`}
+
+                              <span className={styles.itemInfo}>
+                                <span className={styles.itemName}>{item.productName}</span>
+                                <span className={styles.itemMeta}>
+                                  Talle {item.size}
+                                  {item.color && ` · ${item.color}`}
+                                </span>
                                 {isBackordered(item) && (
-                                  <em className={styles.itemBackorder}>
+                                  <span className={styles.itemBackorder}>
                                     {item.backorderedUnits} a pedido · {ON_DEMAND_LEAD_TIME}
-                                  </em>
+                                  </span>
                                 )}
                               </span>
+
                               <span className={styles.itemPrice}>
                                 {formatPrice(item.unitPrice * item.quantity)}
                               </span>
+
+                              {/* Control interno: marcar una prenda no le manda
+                                  nada al socio. El mail sale cuando el pedido
+                                  entero pasa a "Entregado". */}
+                              <label
+                                className={`${styles.deliverBox} ${item.delivered ? styles.deliverOn : ''}`}
+                                title="Control interno: no le llega ningún mail al socio"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={item.delivered}
+                                  disabled={pendingCode === order.code}
+                                  onChange={(event) =>
+                                    void changeDelivered(order, index, event.target.checked)
+                                  }
+                                />
+                                <span>Entregado</span>
+                              </label>
                             </li>
                           ))}
                         </ul>

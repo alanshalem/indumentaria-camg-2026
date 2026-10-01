@@ -1,6 +1,7 @@
 import type { Ars } from './money.js';
 import type { AppliedPromotion } from './promotions.js';
 import type { SizeTier } from './product.js';
+import type { PaymentMethod } from './payment.js';
 
 /**
  * Ciclo de vida real del pedido: el socio lo genera, paga, la prenda llega y
@@ -64,6 +65,15 @@ export interface OrderItem {
    * Cero —o ausente, en pedidos anteriores al inventario— es entrega normal.
    */
   backorderedUnits: number;
+  /**
+   * Marca de control interno: esta prenda ya se le entregó al socio.
+   *
+   * Es independiente del estado del pedido. Sirve para los pedidos que se
+   * entregan en partes —una prenda estaba y la otra salió a pedido— y **no
+   * dispara ningún mail**: el socio se entera cuando el pedido entero pasa a
+   * "Entregado".
+   */
+  delivered: boolean;
 }
 
 export interface Order {
@@ -80,6 +90,10 @@ export interface Order {
   promotions: AppliedPromotion[];
   total: Ars;
   status: OrderStatus;
+  /** Cómo paga el socio. `null` hasta que el club lo registra. */
+  paymentMethod: PaymentMethod | null;
+  /** Link de cobro de Mercado Pago, cargado a mano por el club. */
+  paymentLink: string | null;
 }
 
 /**
@@ -120,6 +134,21 @@ export const countOrderUnits = (items: readonly Pick<OrderItem, 'quantity'>[]): 
 
 export const customerFullName = (order: Pick<Order, 'customerName' | 'customerLastName'>): string =>
   `${order.customerName} ${order.customerLastName}`.trim();
+
+/** Cuántas líneas del pedido ya se entregaron. */
+export const deliveredCount = (order: Pick<Order, 'items'>): number =>
+  order.items.filter((item) => item.delivered).length;
+
+/**
+ * Hay prendas entregadas y prendas que no.
+ *
+ * Es lo que el club necesita ver de un vistazo: un pedido a medio entregar
+ * sigue abierto aunque ya le hayan dado algo al socio.
+ */
+export function isPartiallyDelivered(order: Pick<Order, 'items'>): boolean {
+  const entregadas = deliveredCount(order);
+  return entregadas > 0 && entregadas < order.items.length;
+}
 
 /** La línea sale a pedido: hay unidades que el club no tenía físicamente. */
 export const isBackordered = (item: Pick<OrderItem, 'backorderedUnits'>): boolean =>

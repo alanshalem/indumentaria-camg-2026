@@ -5,6 +5,7 @@ import {
   type Order,
   type OrderStatus,
 } from '../../shared/domain/order.js';
+import type { PaymentMethod } from '../../shared/domain/payment.js';
 import { ORDERS_PAGE_SIZE, type OrderFilters } from '../../shared/schemas/order.schema.js';
 import { notFound } from '../http/errors.js';
 import { toOrder, type OrderRow } from './mappers.js';
@@ -13,7 +14,7 @@ import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'orders';
 const COLUMNS =
-  'code,customer_name,customer_last_name,phone,email,items,subtotal,promotions,total,status,created_at';
+  'code,customer_name,customer_last_name,phone,email,items,subtotal,promotions,total,status,payment_method,payment_link,created_at';
 
 export interface OrderRepository {
   list(filters?: OrderFilters): Promise<OrderPage>;
@@ -22,6 +23,16 @@ export interface OrderRepository {
   findByCode(code: string): Promise<Order | null>;
   create(order: Order): Promise<Order>;
   updateStatus(code: string, status: OrderStatus): Promise<Order>;
+  /** Marca o desmarca una línea como entregada. No toca el estado del pedido. */
+  setItemDelivered(code: string, index: number, delivered: boolean): Promise<Order>;
+  /** Registra cómo paga el socio y, si aplica, el link de cobro. */
+  setPayment(code: string, payment: OrderPaymentInput): Promise<Order>;
+}
+
+/** Lo que el panel puede cambiar del pago. */
+export interface OrderPaymentInput {
+  method: PaymentMethod | null;
+  link: string | null;
 }
 
 /** `%` y `_` son comodines en ILIKE: hay que neutralizarlos antes de interpolar. */
@@ -147,6 +158,44 @@ export const orderRepository: OrderRepository = {
       .select(COLUMNS)
       .single();
     if (error) throw toHttpError(error, 'orders.create');
+    return toOrder(data as unknown as OrderRow);
+  },
+
+  async setItemDelivered(code, index, delivered) {
+    const order = await orderRepository.findByCode(code);
+    if (!order) throw notFound(`No existe el pedido ${code}.`);
+
+    const item = order.items[index];
+    if (!item) throw notFound(`El pedido ${code} no tiene una línea ${index}.`);
+
+    // Los items son un snapshot JSON: se reescribe el array completo con la
+    // línea cambiada. Nunca se reordenan, así que el índice es estable.
+    const items = order.items.map((line, at) =>
+      at === index ? { ...line, delivered } : line,
+    );
+
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .update({ items })
+      .eq('code', code)
+      .select(COLUMNS)
+      .maybeSingle();
+
+    if (error) throw toHttpError(error, 'orders.setItemDelivered');
+    if (!data) throw notFound(`No existe el pedido ${code}.`);
+    return toOrder(data as unknown as OrderRow);
+  },
+
+  async setPayment(code, payment) {
+    const { data, error } = await getSupabase()
+      .from(TABLE)
+      .update({ payment_method: payment.method, payment_link: payment.link })
+      .eq('code', code)
+      .select(COLUMNS)
+      .maybeSingle();
+
+    if (error) throw toHttpError(error, 'orders.setPayment');
+    if (!data) throw notFound(`No existe el pedido ${code}.`);
     return toOrder(data as unknown as OrderRow);
   },
 

@@ -23,6 +23,13 @@ import { orderRepository, type OrderRepository } from '../../infra/orderReposito
 import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
 import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
 import { stockRepository, type StockRepository } from '../../infra/stockRepository.js';
+import {
+  whatsappLogRepository,
+  type WhatsappLogRecord,
+  type WhatsappLogRepository,
+} from '../../infra/whatsappLogRepository.js';
+import type { WhatsappTemplate } from '../../../shared/domain/whatsapp.js';
+import type { OrderPaymentDto } from '../../../shared/schemas/order.schema.js';
 import { emailsService, type EmailsService } from '../emails/emails.service.js';
 
 const CODE_ATTEMPTS = 5;
@@ -38,6 +45,12 @@ export interface OrdersService {
   findPublic(code: string, token: string): Promise<PublicOrder>;
   create(input: CreateOrderInput): Promise<OrderCreated>;
   updateStatus(code: string, status: OrderStatus): Promise<OrderStatusUpdate>;
+  /** Control interno: marca una prenda como entregada sin avisarle al socio. */
+  setItemDelivered(code: string, index: number, delivered: boolean): Promise<Order>;
+  setPayment(code: string, payment: OrderPaymentDto): Promise<Order>;
+  /** Registra que se preparó un mensaje y devuelve el historial actualizado. */
+  recordWhatsapp(code: string, template: WhatsappTemplate): Promise<WhatsappLogRecord[]>;
+  whatsappHistory(code: string): Promise<WhatsappLogRecord[]>;
 }
 
 export function createOrdersService(
@@ -46,6 +59,7 @@ export function createOrdersService(
   promotions: PromotionRepository = promotionRepository,
   emails: EmailsService = emailsService,
   stock: StockRepository = stockRepository,
+  whatsapp: WhatsappLogRepository = whatsappLogRepository,
 ): OrdersService {
   return {
     list: (filters) => orders.list(filters),
@@ -90,6 +104,9 @@ export function createOrdersService(
           promotions: outcome.discounts,
           total: outcome.total,
           status: 'pending',
+          // El club los registra después, cuando contacta al socio para cobrar.
+          paymentMethod: null,
+          paymentLink: null,
         };
         try {
           const saved = await orders.create(order);
@@ -107,6 +124,21 @@ export function createOrdersService(
       }
       throw internalError('No se pudo generar un código de pedido único. Reintentá.');
     },
+
+    // Deliberadamente no llama a `emails.notifyStatus`: marcar una prenda es
+    // control interno del club. El socio se entera cuando el pedido entero
+    // pasa a "Entregado", que es el único momento en que le cambia algo.
+    setItemDelivered: (code, index, delivered) =>
+      orders.setItemDelivered(code, index, delivered),
+
+    setPayment: (code, payment) => orders.setPayment(code, payment),
+
+    async recordWhatsapp(code, template) {
+      await whatsapp.record(code, template);
+      return whatsapp.history(code);
+    },
+
+    whatsappHistory: (code) => whatsapp.history(code),
 
     async updateStatus(code, status) {
       const order = await orders.updateStatus(code, status);
@@ -175,6 +207,7 @@ async function priceItems(input: CreateOrderInput, products: ProductRepository):
       // Lo resuelve el descuento de stock, que corre después de tener los
       // precios: hasta entonces no se sabe qué había físicamente.
       backorderedUnits: 0,
+      delivered: false,
     };
   });
 }

@@ -9,7 +9,7 @@ import type { PromotionRepository } from '../server/infra/promotionRepository';
 import type { EmailsService } from '../server/modules/emails/emails.service';
 import { createOrdersService } from '../server/modules/orders/orders.service';
 import { HttpError } from '../server/http/errors';
-import { hasBackorder } from '../shared/domain/order';
+import { hasBackorder, isPartiallyDelivered } from '../shared/domain/order';
 import { emailKindForStatus, type EmailKind } from '../shared/domain/orderEmails';
 import type { StockRepository } from '../server/infra/stockRepository';
 import { signOrderToken } from '../server/security/orderToken';
@@ -73,6 +73,17 @@ function fakeOrders(): OrderRepository & { saved: Order[] } {
     create: async (order) => {
       saved.push(order);
       return order;
+    },
+    setItemDelivered: async (code: string, index: number, delivered: boolean) => {
+      const found = saved.find((order) => order.code === code)!;
+      found.items = found.items.map((item, at) => (at === index ? { ...item, delivered } : item));
+      return found;
+    },
+    setPayment: async (code: string, payment: { method: never; link: string | null }) => {
+      const found = saved.find((order) => order.code === code)!;
+      found.paymentMethod = payment.method;
+      found.paymentLink = payment.link;
+      return found;
     },
     updateStatus: async (code: string, status: OrderStatus) => {
       const found = saved.find((order) => order.code === code)!;
@@ -560,5 +571,98 @@ describe('inventario al generar el pedido', () => {
     // El descuento va antes del bucle de reintentos: dos intentos, un descuento.
     expect(stock.consumido).toEqual(['campera-canguro|M|:2']);
     expect(stock.disponible['campera-canguro|M|']).toBe(3);
+  });
+});
+
+describe('entrega parcial · control interno', () => {
+  const armar = async () => {
+    const orders = fakeOrders();
+    const emails = fakeEmails();
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      emails,
+    );
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [
+        { productId: 'campera-canguro', size: 'M', quantity: 1 },
+        { productId: 'campera-canguro', size: 'L', quantity: 1 },
+      ],
+    });
+
+    // El mail de "recibimos tu pedido" ya salio al crearlo.
+    emails.notified.length = 0;
+    return { service, emails, order };
+  };
+
+  it('marcar una prenda NO le manda ningun mail al socio', async () => {
+    const { service, emails, order } = await armar();
+
+    const actualizado = await service.setItemDelivered(order.code, 0, true);
+
+    expect(actualizado.items[0]?.delivered).toBe(true);
+    // Es control interno del club: el socio se entera cuando el pedido entero
+    // pasa a "Entregado", que es lo unico que le cambia algo.
+    expect(emails.notified).toEqual([]);
+  });
+
+  it('no toca el estado del pedido', async () => {
+    const { service, order } = await armar();
+
+    const actualizado = await service.setItemDelivered(order.code, 0, true);
+
+    expect(actualizado.status).toBe('pending');
+  });
+
+  it('marca una sola linea y deja las otras como estaban', async () => {
+    const { service, order } = await armar();
+
+    const actualizado = await service.setItemDelivered(order.code, 1, true);
+
+    expect(actualizado.items[0]?.delivered).toBe(false);
+    expect(actualizado.items[1]?.delivered).toBe(true);
+    expect(isPartiallyDelivered(actualizado)).toBe(true);
+  });
+
+  it('se puede desmarcar', async () => {
+    const { service, order } = await armar();
+
+    await service.setItemDelivered(order.code, 0, true);
+    const actualizado = await service.setItemDelivered(order.code, 0, false);
+
+    expect(actualizado.items[0]?.delivered).toBe(false);
+    expect(isPartiallyDelivered(actualizado)).toBe(false);
+  });
+
+  it('pasar el pedido entero a Entregado si manda el aviso', async () => {
+    const { service, emails, order } = await armar();
+
+    await service.updateStatus(order.code, 'delivered');
+
+    // 'delivered' no tiene plantilla, pero el servicio de mails igual se
+    // consulta: es el unico camino que puede avisarle algo al socio.
+    expect(emails.notified).toEqual(['delivered']);
+  });
+});
+
+describe('metodo de pago', () => {
+  it('nace sin definir: lo registra el club al cobrar', async () => {
+    const service = createOrdersService(
+      fakeOrders(),
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+    );
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
+    });
+
+    expect(order.paymentMethod).toBeNull();
+    expect(order.paymentLink).toBeNull();
   });
 });

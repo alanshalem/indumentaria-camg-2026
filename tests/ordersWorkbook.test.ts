@@ -29,6 +29,7 @@ const item = (overrides: Partial<OrderItem> = {}): OrderItem => ({
   size: 'M',
   sizeTier: 'large',
   backorderedUnits: 0,
+  delivered: false,
   color: null,
   quantity: 1,
   unitPrice: 54000,
@@ -51,6 +52,8 @@ const order = (items: OrderItem[], overrides: Partial<Order> = {}): Order => {
     promotions: [],
     total: subtotal,
     status: 'pending',
+    paymentMethod: null,
+    paymentLink: null,
     ...overrides,
   };
 };

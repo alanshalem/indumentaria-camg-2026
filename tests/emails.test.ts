@@ -47,6 +47,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
       quantity: 2,
       unitPrice: 54000,
       backorderedUnits: 0,
+      delivered: false,
     },
     {
       productId: 'remera-algodon',
@@ -57,6 +58,7 @@ const order = (overrides: Partial<Order> = {}): Order => ({
       quantity: 1,
       unitPrice: 20500,
       backorderedUnits: 0,
+      delivered: false,
     },
   ],
   subtotal: 128500,
@@ -71,6 +73,8 @@ const order = (overrides: Partial<Order> = {}): Order => ({
   ],
   total: 126450,
   status: 'pending',
+  paymentMethod: null,
+  paymentLink: null,
   ...overrides,
 });
 
@@ -275,6 +279,7 @@ describe('plantillas de mail', () => {
           quantity: 1,
           unitPrice: 1000,
           backorderedUnits: 0,
+          delivered: false,
         },
       ],
       promotions: [],

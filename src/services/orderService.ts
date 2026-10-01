@@ -8,6 +8,9 @@ import {
 import type { CreateOrderInput, Order, OrderStatus, PublicOrder } from '@shared/domain/order';
 import { EXPORT_PAGE_SIZE, type OrderFilters } from '@shared/schemas/order.schema';
 import type { EmailLogRecord } from '@shared/domain/orderEmails';
+import type { PaymentMethod } from '@shared/domain/payment';
+import type { WhatsappTemplate } from '@shared/domain/whatsapp';
+import type { WhatsappLogRecord } from '@shared/domain/whatsapp';
 import { httpClient } from './httpClient';
 
 /** Los filtros como query string. El servidor completa los que falten. */
@@ -62,6 +65,21 @@ export const orderService = {
   /** Sólo admin. Qué avisos recibió el socio y cuándo. */
   emailHistory: (code: string) =>
     httpClient.get<EmailLogRecord[]>(ROUTES.orders.emails(code)),
+
+  /** Control interno: marca una prenda como entregada. No manda ningún mail. */
+  setItemDelivered: (code: string, index: number, delivered: boolean) =>
+    httpClient.patch<Order>(ROUTES.orders.items(code), { index, delivered }),
+
+  setPayment: (code: string, payment: { method: PaymentMethod | null; link: string | null }) =>
+    httpClient.patch<Order>(ROUTES.orders.payment(code), payment),
+
+  /** Qué mensajes de WhatsApp se le prepararon al socio. */
+  whatsappHistory: (code: string) =>
+    httpClient.get<WhatsappLogRecord[]>(ROUTES.orders.whatsapp(code)),
+
+  /** Registra que se abrió el chat con una plantilla y devuelve el historial. */
+  recordWhatsapp: (code: string, template: WhatsappTemplate) =>
+    httpClient.post<WhatsappLogRecord[]>(ROUTES.orders.whatsapp(code), { template }),
 
   updateStatus: (code: string, status: OrderStatus) =>
     httpClient.patch<OrderStatusUpdate>(ROUTES.orders.byCode(code), { status }),
