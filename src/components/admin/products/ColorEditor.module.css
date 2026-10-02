@@ -61,7 +61,7 @@
 }
 
 .remove:hover {
-  color: #ff6b6b;
+  color: var(--color-danger-strong);
 }
 
 /* --- Campos ----------------------------------------------------------------- */
@@ -149,5 +149,5 @@
 .error {
   margin: 0;
   font-size: 0.82rem;
-  color: #ff8ca3;
+  color: var(--color-error);
 }

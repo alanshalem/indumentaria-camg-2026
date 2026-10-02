@@ -3,6 +3,7 @@ import type { StockLevel } from '../../shared/domain/stock.js';
 import { notFound } from '../http/errors.js';
 import { toProduct, type ProductRow } from './mappers.js';
 import { toHttpError } from './postgrestError.js';
+import { maybeRowOf, rowOf, rowsOf } from './postgrestResult.js';
 import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'products';
@@ -73,47 +74,57 @@ export const productRepository: ProductRepository = {
     let query = getSupabase().from(TABLE).select(COLUMNS);
     if (!includeInactive) query = query.eq('is_active', true);
 
-    const { data, error } = await query
+    const result = await query
       .order('sort_order', { ascending: true })
       .order('name', { ascending: true });
 
-    if (error) throw toHttpError(error, 'products.list');
-    return (data as unknown as ProductRow[]).map(toProduct);
+    return rowsOf<ProductRow>(result, 'products.list').map(toProduct);
   },
 
   async findById(id) {
-    const { data, error } = await getSupabase().from(TABLE).select(COLUMNS).eq('id', id).maybeSingle();
-    if (error) throw toHttpError(error, 'products.findById');
-    return data ? toProduct(data as unknown as ProductRow) : null;
+    const row = maybeRowOf<ProductRow>(
+      await getSupabase().from(TABLE).select(COLUMNS).eq('id', id).maybeSingle(),
+      'products.findById',
+    );
+    return row ? toProduct(row) : null;
   },
 
   async findManyByIds(ids) {
     if (ids.length === 0) return new Map();
-    const { data, error } = await getSupabase().from(TABLE).select(COLUMNS).in('id', ids);
-    if (error) throw toHttpError(error, 'products.findManyByIds');
-    return new Map((data as unknown as ProductRow[]).map((row) => [row.id, toProduct(row)]));
+    const rows = rowsOf<ProductRow>(
+      await getSupabase().from(TABLE).select(COLUMNS).in('id', ids),
+      'products.findManyByIds',
+    );
+    return new Map(rows.map((row) => [row.id, toProduct(row)]));
   },
 
   async create(id, input) {
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .insert({ id, ...toRow(input) })
       .select(COLUMNS)
       .single();
-    if (error) throw toHttpError(error, 'products.create');
-    return toProduct(data as unknown as ProductRow);
+
+    return toProduct(
+      rowOf<ProductRow>(
+        result,
+        'products.create',
+        'La base no devolvio el producto recien creado.',
+      ),
+    );
   },
 
   async update(id, patch) {
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .update({ ...toRow(patch), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select(COLUMNS)
       .maybeSingle();
-    if (error) throw toHttpError(error, 'products.update');
-    if (!data) throw notFound(`No existe el producto "${id}".`);
-    return toProduct(data as unknown as ProductRow);
+
+    return toProduct(
+      rowOf<ProductRow>(result, 'products.update', `No existe el producto "${id}".`),
+    );
   },
 
   async remove(id) {

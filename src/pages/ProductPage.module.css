@@ -81,7 +81,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background: linear-gradient(160deg, #ffffff 0%, #ededed 100%);
+  background: linear-gradient(160deg, var(--color-white) 0%, var(--color-photo-wash) 100%);
 }
 
 .mainImage img {
@@ -103,7 +103,7 @@
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: #fff;
+  background: var(--color-white);
   transition: border-color var(--transition), transform var(--transition);
 }
 
@@ -360,7 +360,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: #fff;
+  background: var(--color-white);
   cursor: zoom-in;
 }
 
@@ -410,7 +410,7 @@
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
-  background: #fff;
+  background: var(--color-white);
   margin-bottom: 8px;
 }
 
@@ -441,7 +441,7 @@
   background: rgba(245, 158, 11, 0.1);
   font-size: 0.9rem;
   line-height: 1.45;
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .onDemand span {

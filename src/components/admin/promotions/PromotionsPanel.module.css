@@ -87,7 +87,7 @@
 .on {
   background: rgba(35, 165, 90, 0.16);
   border-color: rgba(35, 165, 90, 0.5);
-  color: #7ee2a8;
+  color: var(--color-success);
 }
 
 .off {
@@ -128,7 +128,7 @@
 .unknown {
   margin: 0;
   font-size: 0.86rem;
-  color: #ff8ca3;
+  color: var(--color-error);
 }
 
 .editor {
@@ -178,7 +178,7 @@
 }
 
 .delete:hover:not(:disabled) {
-  color: #ff8a8a;
+  color: var(--color-danger);
 }
 
 .delete:disabled {
@@ -205,5 +205,5 @@
 
 .warn {
   font-style: normal;
-  color: #fbbf24;
+  color: var(--color-warning);
 }

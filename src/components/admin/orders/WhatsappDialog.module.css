@@ -27,7 +27,7 @@
   gap: 10px;
   padding: 14px 16px;
   border: 1px solid var(--color-border);
-  border-left: 3px solid #25d366;
+  border-left: 3px solid var(--color-whatsapp);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--color-surface-2);
 }
@@ -61,7 +61,7 @@
 }
 
 .sent {
-  color: #7ee2a8;
+  color: var(--color-success);
 }
 
 .notSent {
@@ -83,7 +83,7 @@
 .warn {
   margin: 0;
   font-size: 0.8rem;
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .previewToggle {

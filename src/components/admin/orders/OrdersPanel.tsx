@@ -8,8 +8,8 @@ import {
   type Order,
   type OrderStatus,
 } from '@shared/domain/order';
+import { useAdminAction } from '@/hooks/useAdminAction';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
-import { errorMessage } from '@/services/apiError';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { orderService } from '@/services/orderService';
 import { endOfDayIso, startOfDayIso } from '@/utils/formatDate';
@@ -120,34 +120,32 @@ export function OrdersPanel() {
   );
 
   // La librería de Excel se descarga recién acá, al primer click.
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportError, setExportError] = useState('');
+  const { busyId, error: exportError, run } = useAdminAction();
 
   const filterLabel = useMemo(
     () => describeFilter({ status, search: debouncedSearch, from, to }),
     [status, debouncedSearch, from, to],
   );
 
-  async function handleExport() {
-    setExportError('');
-    setIsExporting(true);
-    try {
-      // Todo el filtro, no la página visible: exportar 50 de 300 pedidos era
-      // una planilla incompleta que parecía completa.
-      const todos = await orderService.listAll({
-        ...(status !== 'all' ? { status } : {}),
-        ...(debouncedSearch ? { search: debouncedSearch } : {}),
-        ...(startOfDayIso(from) ? { from: startOfDayIso(from) } : {}),
-        ...(endOfDayIso(to) ? { to: endOfDayIso(to) } : {}),
-      });
+  const handleExport = () =>
+    void run(
+      'export',
+      async () => {
+        // Todo el filtro, no la página visible: exportar 50 de 300 pedidos era
+        // una planilla incompleta que parecía completa.
+        const todos = await orderService.listAll({
+          ...(status !== 'all' ? { status } : {}),
+          ...(debouncedSearch ? { search: debouncedSearch } : {}),
+          ...(startOfDayIso(from) ? { from: startOfDayIso(from) } : {}),
+          ...(endOfDayIso(to) ? { to: endOfDayIso(to) } : {}),
+        });
 
-      await exportOrdersToExcel(todos, { filterLabel, generatedAt: new Date() });
-    } catch (caught) {
-      setExportError(errorMessage(caught, 'No se pudo generar el Excel.'));
-    } finally {
-      setIsExporting(false);
-    }
-  }
+        await exportOrdersToExcel(todos, { filterLabel, generatedAt: new Date() });
+      },
+      // Descargar un archivo ya se ve solo: el navegador lo anuncia.
+      null,
+      'No se pudo generar el Excel.',
+    );
 
   return (
     <>
@@ -197,9 +195,9 @@ export function OrdersPanel() {
         <div className={styles.filterActions}>
           <Button
             variant="ghost"
-            onClick={() => void handleExport()}
+            onClick={handleExport}
             disabled={pageData.total === 0 || status === 'cancelled'}
-            loading={isExporting}
+            loading={busyId === 'export'}
             title={
               status === 'cancelled'
                 ? 'Los pedidos eliminados no se exportan: la planilla es para facturar y para encargarle al proveedor.'
@@ -207,7 +205,7 @@ export function OrdersPanel() {
             }
           >
             {/* Dice cuántos: el botón exporta lo filtrado, no todo el histórico. */}
-            {isExporting ? 'Generando…' : `Exportar Excel (${pageData.total})`}
+            {busyId === 'export' ? 'Generando…' : `Exportar Excel (${pageData.total})`}
           </Button>
           <Button variant="ghost" onClick={() => void reload()}>
             Actualizar

@@ -22,7 +22,7 @@
 }
 
 .error {
-  color: #ff8a8a;
+  color: var(--color-danger);
 }
 
 .list {
@@ -68,7 +68,7 @@
 
 .sent .mark {
   background: rgba(35, 165, 90, 0.18);
-  color: #7ee2a8;
+  color: var(--color-success);
 }
 
 /* Nunca se mandó: no es un error, pero el admin tiene que poder verlo. */
@@ -83,10 +83,10 @@
 .failed .mark,
 .skipped .mark {
   background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .failed .detail,
 .skipped .detail {
-  color: #fbbf24;
+  color: var(--color-warning);
 }

@@ -2,9 +2,16 @@ import type { WhatsappLogRecord, WhatsappTemplate } from '../../shared/domain/wh
 
 export type { WhatsappLogRecord };
 import { toHttpError } from './postgrestError.js';
+import { rowsOf } from './postgrestResult.js';
 import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'whatsapp_log';
+
+/** Las columnas tal como las devuelve `whatsapp_log`. */
+interface PreparedRow {
+  template: WhatsappTemplate;
+  prepared_at: string;
+}
 
 export interface WhatsappLogRepository {
   history(orderCode: string): Promise<WhatsappLogRecord[]>;
@@ -13,17 +20,15 @@ export interface WhatsappLogRepository {
 
 export const whatsappLogRepository: WhatsappLogRepository = {
   async history(orderCode) {
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .select('template, prepared_at')
       .eq('order_code', orderCode)
       .order('prepared_at', { ascending: false });
 
-    if (error) throw toHttpError(error, 'whatsappLog.history');
-
-    return (data ?? []).map((row) => ({
-      template: row.template as WhatsappTemplate,
-      preparedAt: new Date(row.prepared_at as string).getTime(),
+    return rowsOf<PreparedRow>(result, 'whatsappLog.history').map((row) => ({
+      template: row.template,
+      preparedAt: new Date(row.prepared_at).getTime(),
     }));
   },
 

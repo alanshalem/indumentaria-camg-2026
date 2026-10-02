@@ -3,14 +3,15 @@ import {
   countOrderUnits,
   countsForBilling,
   customerFullName,
+  isConfirmed,
   ORDER_STATUS_LABELS,
   type Order,
   type OrderItem,
   type OrderStatus,
-} from '@shared/domain/order.js';
-import { formatPhone } from '@shared/domain/phone.js';
-import { CLUB } from '@shared/domain/club.js';
-import { compareSizes, SIZE_TIER_LABELS } from '@shared/domain/product.js';
+} from '@shared/domain/order';
+import { formatPhone } from '@shared/domain/phone';
+import { CLUB } from '@shared/domain/club';
+import { compareSizes, SIZE_TIER_LABELS } from '@shared/domain/product';
 
 /**
  * Arma el libro de Excel de pedidos.
@@ -46,17 +47,6 @@ const STATUS_STYLE: Record<OrderStatus, { textColor: string; backgroundColor: st
   delivered: { textColor: '#166534', backgroundColor: '#DCFCE7' },
   cancelled: { textColor: '#7F1D1D', backgroundColor: '#FEE2E2' },
 };
-
-/**
- * Un pedido cuenta como confirmado en cuanto entra plata: con la seña ya hay
- * compromiso del socio, así que el club puede encargarle la prenda al
- * proveedor. Es la línea que separa eso de lo que todavía es una intención.
- *
- * Un pedido eliminado no cuenta nunca, aunque haya pasado por estados
- * posteriores a "pendiente".
- */
-export const isConfirmed = (status: OrderStatus): boolean =>
-  status !== 'pending' && countsForBilling(status);
 
 /** Los pedidos que entran en el libro: todos menos los eliminados. */
 const billable = (orders: readonly Order[]): Order[] =>

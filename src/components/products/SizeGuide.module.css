@@ -92,7 +92,7 @@
   width: auto;
   height: auto;
   object-fit: contain;
-  background: #fff;
+  background: var(--color-white);
   border-radius: 8px;
   cursor: default;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
@@ -107,7 +107,7 @@
   border-radius: 50%;
   border: 0;
   background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  color: var(--color-white);
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
@@ -131,7 +131,7 @@
   font-size: 0.9rem;
   color: var(--color-muted);
   text-align: center;
-  background: #0a0a0a;
+  background: var(--color-bg);
   text-transform: uppercase;
   letter-spacing: 0.12em;
 }

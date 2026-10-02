@@ -3,9 +3,8 @@ import type {
   PromotionInputDto,
   PromotionPatchDto,
 } from '../../shared/schemas/promotion.schema.js';
-import { notFound } from '../http/errors.js';
 import { toPromotion, type PromotionRow } from './mappers.js';
-import { toHttpError } from './postgrestError.js';
+import { rowOf, rowsOf } from './postgrestResult.js';
 import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'promotions';
@@ -23,13 +22,12 @@ export const promotionRepository: PromotionRepository = {
     let query = getSupabase().from(TABLE).select(COLUMNS);
     if (!includeInactive) query = query.eq('is_active', true);
 
-    const { data, error } = await query.order('sort_order', { ascending: true });
-    if (error) throw toHttpError(error, 'promotions.list');
-    return (data as unknown as PromotionRow[]).map(toPromotion);
+    const result = await query.order('sort_order', { ascending: true });
+    return rowsOf<PromotionRow>(result, 'promotions.list').map(toPromotion);
   },
 
   async create(id, input) {
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .insert({
         id,
@@ -43,8 +41,13 @@ export const promotionRepository: PromotionRepository = {
       .select(COLUMNS)
       .single();
 
-    if (error) throw toHttpError(error, 'promotions.create');
-    return toPromotion(data as unknown as PromotionRow);
+    return toPromotion(
+      rowOf<PromotionRow>(
+        result,
+        'promotions.create',
+        'La base no devolvio la promocion recien creada.',
+      ),
+    );
   },
 
   async update(id, patch) {
@@ -55,27 +58,22 @@ export const promotionRepository: PromotionRepository = {
     if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder;
     if (patch.config !== undefined) row.config = patch.config;
 
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .update({ ...row, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select(COLUMNS)
       .maybeSingle();
 
-    if (error) throw toHttpError(error, 'promotions.update');
-    if (!data) throw notFound(`No existe la promoción "${id}".`);
-    return toPromotion(data as unknown as PromotionRow);
+    return toPromotion(
+      rowOf<PromotionRow>(result, 'promotions.update', `No existe la promoción "${id}".`),
+    );
   },
 
   async remove(id) {
-    const { data, error } = await getSupabase()
-      .from(TABLE)
-      .delete()
-      .eq('id', id)
-      .select('id')
-      .maybeSingle();
+    const result = await getSupabase().from(TABLE).delete().eq('id', id).select('id').maybeSingle();
 
-    if (error) throw toHttpError(error, 'promotions.remove');
-    if (!data) throw notFound(`No existe la promoción "${id}".`);
+    // Solo interesa que existiera: `rowOf` tira el 404 si la promo no estaba.
+    rowOf<{ id: string }>(result, 'promotions.remove', `No existe la promoción "${id}".`);
   },
 };

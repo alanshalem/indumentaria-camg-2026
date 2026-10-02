@@ -1,4 +1,4 @@
-import { toHttpError } from './postgrestError.js';
+import { rowsOf } from './postgrestResult.js';
 import { getSupabase } from './supabaseClient.js';
 
 /** Lo que se pide descontar de una variante. */
@@ -34,7 +34,7 @@ export const stockRepository: StockRepository = {
     // Una función de Postgres y no una serie de updates desde acá: corre en una
     // sola transacción y bloquea cada fila, así dos socios que compran la
     // última unidad al mismo tiempo no la descuentan los dos.
-    const { data, error } = await getSupabase().rpc('consume_stock', {
+    const result = await getSupabase().rpc('consume_stock', {
       p_items: items.map((item) => ({
         productId: item.productId,
         size: item.size,
@@ -43,7 +43,6 @@ export const stockRepository: StockRepository = {
       })),
     });
 
-    if (error) throw toHttpError(error, 'stock.consume');
-    return (data ?? []) as StockOutcome[];
+    return rowsOf<StockOutcome>(result, 'stock.consume');
   },
 };

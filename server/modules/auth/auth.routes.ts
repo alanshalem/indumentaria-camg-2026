@@ -6,12 +6,16 @@ import { parseOrThrow } from '../../http/validate.js';
 import { requireAdminSession } from '../../security/adminGuard.js';
 import { login } from './auth.service.js';
 
-export const authRoutes = new Router()
-  .post(ROUTES.auth.login, (request) => {
-    const { password } = parseOrThrow(loginSchema, request.body, 'No se pudo iniciar sesión');
-    return ok(login(password, request.ip));
-  })
-  .get(ROUTES.auth.session, (request) => {
-    const { exp } = requireAdminSession(request);
-    return ok({ authenticated: true, expiresAt: exp });
-  });
+/** Rutas de sesión. `signIn` entra por parámetro para poder testear el 401. */
+export const makeAuthRoutes = (signIn: typeof login = login): Router =>
+  new Router()
+    .post(ROUTES.auth.login, (request) => {
+      const { password } = parseOrThrow(loginSchema, request.body, 'No se pudo iniciar sesión');
+      return ok(signIn(password, request.ip));
+    })
+    .get(ROUTES.auth.session, (request) => {
+      const { exp } = requireAdminSession(request);
+      return ok({ authenticated: true, expiresAt: exp });
+    });
+
+export const authRoutes = makeAuthRoutes();

@@ -1,148 +1,19 @@
 import './support/serverEnv';
 import { describe, expect, it } from 'vitest';
-import type { Order, OrderStatus } from '../shared/domain/order';
-import type { Product, ProductInput } from '../shared/domain/product';
-import type { PromotionDefinition } from '../shared/domain/promotions';
-import type { OrderRepository } from '../server/infra/orderRepository';
-import type { ProductRepository } from '../server/infra/productRepository';
-import type { PromotionRepository } from '../server/infra/promotionRepository';
-import type { EmailsService } from '../server/modules/emails/emails.service';
 import { createOrdersService } from '../server/modules/orders/orders.service';
 import { HttpError } from '../server/http/errors';
 import { hasBackorder, isPartiallyDelivered } from '../shared/domain/order';
-import { emailKindForStatus, type EmailKind } from '../shared/domain/orderEmails';
-import type { StockRepository } from '../server/infra/stockRepository';
+import type { EmailKind } from '../shared/domain/orderEmails';
 import { signOrderToken } from '../server/security/orderToken';
-
-const product = (overrides: Partial<Product> = {}): Product => ({
-  id: 'campera-canguro',
-  name: 'Campera Canguro CAMG',
-  description: '',
-  imageUrl: '/images/fotos-prendas/campera.jpg',
-  sizesSmall: ['6', '8', '10', '12', '14'],
-  sizesLarge: ['16/XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'],
-  priceSmall: 48500,
-  priceLarge: 54000,
-  colors: [],
-  sizeChartId: 'buzos',
-  category: 'abrigo',
-  stock: [],
-  isActive: true,
-  sortOrder: 0,
-  createdAt: '2026-01-01T00:00:00Z',
-  updatedAt: '2026-01-01T00:00:00Z',
-  ...overrides,
-});
-
-const CUSTOMER = {
-  customerName: 'Ana',
-  customerLastName: 'Pérez',
-  phone: '1123456789',
-  email: 'ana@ejemplo.com',
-  paymentMethod: 'mercadopago' as const,
-};
-
-/** Doble en memoria: el servicio no sabe si detrás hay Postgres o un Map. */
-function fakeProducts(catalog: Product[]): ProductRepository {
-  const unused = () => {
-    throw new Error('no usado');
-  };
-  return {
-    list: async () => catalog,
-    findById: async (id) => catalog.find((item) => item.id === id) ?? null,
-    findManyByIds: async (ids) =>
-      new Map(catalog.filter((item) => ids.includes(item.id)).map((item) => [item.id, item])),
-    create: unused,
-    update: (_id: string, _patch: Partial<ProductInput>) => unused(),
-    setStock: unused,
-    remove: unused,
-  };
-}
-
-function fakeOrders(): OrderRepository & { saved: Order[] } {
-  const saved: Order[] = [];
-  return {
-    saved,
-    list: async () => ({ orders: saved, total: saved.length }),
-    summary: async () => ({
-      revenue: saved.reduce((sum, order) => sum + order.total, 0),
-      discounts: 0,
-      open: saved.length,
-      counted: saved.length,
-    }),
-    findByCode: async (code) => saved.find((order) => order.code === code) ?? null,
-    create: async (order) => {
-      saved.push(order);
-      return order;
-    },
-    setItemDelivered: async (code: string, index: number, delivered: boolean) => {
-      const found = saved.find((order) => order.code === code)!;
-      found.items = found.items.map((item, at) => (at === index ? { ...item, delivered } : item));
-      return found;
-    },
-    setPayment: async (code: string, payment: { method: never; link: string | null }) => {
-      const found = saved.find((order) => order.code === code)!;
-      found.paymentMethod = payment.method;
-      found.paymentLink = payment.link;
-      return found;
-    },
-    updateStatus: async (code: string, status: OrderStatus) => {
-      const found = saved.find((order) => order.code === code)!;
-      found.status = status;
-      return found;
-    },
-  };
-}
-
-const fakePromotions = (definitions: PromotionDefinition[] = []): PromotionRepository => {
-  const unused = async () => {
-    throw new Error('no usado');
-  };
-  return { list: async () => definitions, create: unused, update: unused, remove: unused };
-};
-
-/**
- * Doble del inventario. `disponible` mapea variante -> unidades; lo que no
- * este en el mapa no se controla y se entrega normal.
- */
-function fakeStock(disponible: Record<string, number> = {}) {
-  const consumido: string[] = [];
-  const repo: StockRepository = {
-    consume: async (items) =>
-      items.map((item) => {
-        const key = `${item.productId}|${item.size}|${item.color ?? ''}`;
-        const stock = disponible[key];
-
-        if (stock === undefined) {
-          return { ...item, taken: item.quantity, backorder: 0, tracked: false };
-        }
-
-        const taken = Math.min(item.quantity, stock);
-        disponible[key] = stock - taken;
-        consumido.push(`${key}:${taken}`);
-        return { ...item, taken, backorder: item.quantity - taken, tracked: true };
-      }),
-  };
-  return { repo, consumido, disponible };
-}
-
-/** Espia de mails: registra a que estado se le aviso, sin tocar la red. */
-function fakeEmails(missed: EmailKind[] = []): EmailsService & { notified: OrderStatus[] } {
-  const notified: OrderStatus[] = [];
-  return {
-    notified,
-    notifyStatus: async (order) => {
-      notified.push(order.status);
-      const kind = emailKindForStatus(order.status);
-      return kind ? { kind, status: 'sent', recipient: order.email ?? '' } : null;
-    },
-    missedNotices: async () => missed,
-    history: async () => [],
-    preview: async () => {
-      throw new Error('no usado');
-    },
-  };
-}
+import {
+  CUSTOMER,
+  fakeEmails,
+  fakeOrders,
+  fakeProducts,
+  fakePromotions,
+  fakeStock,
+  product,
+} from './doubles';
 
 describe('ordersService.create', () => {
   it('cobra el precio del tier que corresponde al talle', async () => {
@@ -486,7 +357,7 @@ describe('inventario al generar el pedido', () => {
       fakeProducts([product()]),
       fakePromotions(),
       fakeEmails(),
-      stock.repo,
+      stock.repository,
     );
     return { service, stock };
   };
@@ -560,7 +431,7 @@ describe('inventario al generar el pedido', () => {
       fakeProducts([product()]),
       fakePromotions(),
       fakeEmails(),
-      stock.repo,
+      stock.repository,
     );
 
     await service.create({

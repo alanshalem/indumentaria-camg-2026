@@ -146,7 +146,7 @@
 
 .warn {
   font-style: normal;
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .viewToggle {

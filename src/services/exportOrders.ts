@@ -1,4 +1,4 @@
-import type { Order } from '@shared/domain/order.js';
+import type { Order } from '@shared/domain/order';
 import { buildOrdersWorkbook, type ExportContext } from '@/utils/ordersWorkbook';
 
 const pad = (value: number) => String(value).padStart(2, '0');

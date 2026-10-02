@@ -9,7 +9,7 @@ import type { PaymentMethod } from '../../shared/domain/payment.js';
 import { ORDERS_PAGE_SIZE, type OrderFilters } from '../../shared/schemas/order.schema.js';
 import { notFound } from '../http/errors.js';
 import { toOrder, toOrderRow, type OrderRow } from './mappers.js';
-import { toHttpError } from './postgrestError.js';
+import { maybeRowOf, rowOf, rowsOf } from './postgrestResult.js';
 import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'orders';
@@ -96,15 +96,13 @@ export const orderRepository: OrderRepository = {
     const limit = Number(filters.limit ?? ORDERS_PAGE_SIZE);
     const offset = Number(filters.offset ?? 0);
 
-    const { data, error, count } = await query
+    const result = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) throw toHttpError(error, 'orders.list');
-
     return {
-      orders: (data as unknown as OrderRow[]).map(toOrder),
-      total: count ?? 0,
+      orders: rowsOf<OrderRow>(result, 'orders.list').map(toOrder),
+      total: result.count ?? 0,
     };
   },
 
@@ -115,16 +113,16 @@ export const orderRepository: OrderRepository = {
    * PostgREST, que atan el código a una versión puntual del servidor.
    */
   async summary(filters = {}) {
-    const { data, error } = await applyFilters(
+    const result = await applyFilters(
       getSupabase().from(TABLE).select('subtotal,total,status'),
       filters,
     );
 
-    if (error) throw toHttpError(error, 'orders.summary');
-
     // Doble red: el filtro ya excluye los eliminados salvo que se pidan
     // explícitamente, y acá tampoco suman aunque se los esté mirando.
-    const rows = (data as unknown as TotalsRow[]).filter((row) => countsForBilling(row.status));
+    const rows = rowsOf<TotalsRow>(result, 'orders.summary').filter((row) =>
+      countsForBilling(row.status),
+    );
 
     return {
       revenue: rows.reduce((sum, row) => sum + row.total, 0),
@@ -135,19 +133,21 @@ export const orderRepository: OrderRepository = {
   },
 
   async findByCode(code) {
-    const { data, error } = await getSupabase().from(TABLE).select(COLUMNS).eq('code', code).maybeSingle();
-    if (error) throw toHttpError(error, 'orders.findByCode');
-    return data ? toOrder(data as unknown as OrderRow) : null;
+    const row = maybeRowOf<OrderRow>(
+      await getSupabase().from(TABLE).select(COLUMNS).eq('code', code).maybeSingle(),
+      'orders.findByCode',
+    );
+    return row ? toOrder(row) : null;
   },
 
   async create(order) {
-    const { data, error } = await getSupabase()
-      .from(TABLE)
-      .insert(toOrderRow(order))
-      .select(COLUMNS)
-      .single();
-    if (error) throw toHttpError(error, 'orders.create');
-    return toOrder(data as unknown as OrderRow);
+    return toOrder(
+      rowOf<OrderRow>(
+        await getSupabase().from(TABLE).insert(toOrderRow(order)).select(COLUMNS).single(),
+        'orders.create',
+        'La base no devolvió el pedido recién creado.',
+      ),
+    );
   },
 
   async setItemDelivered(code, index, delivered) {
@@ -163,40 +163,31 @@ export const orderRepository: OrderRepository = {
       at === index ? { ...line, delivered } : line,
     );
 
-    const { data, error } = await getSupabase()
-      .from(TABLE)
-      .update({ items })
-      .eq('code', code)
-      .select(COLUMNS)
-      .maybeSingle();
-
-    if (error) throw toHttpError(error, 'orders.setItemDelivered');
-    if (!data) throw notFound(`No existe el pedido ${code}.`);
-    return toOrder(data as unknown as OrderRow);
+    return patch(code, { items }, 'orders.setItemDelivered');
   },
 
-  async setPayment(code, payment) {
-    const { data, error } = await getSupabase()
-      .from(TABLE)
-      .update({ payment_method: payment.method, payment_link: payment.link })
-      .eq('code', code)
-      .select(COLUMNS)
-      .maybeSingle();
+  setPayment: (code, payment) =>
+    patch(code, { payment_method: payment.method, payment_link: payment.link }, 'orders.setPayment'),
 
-    if (error) throw toHttpError(error, 'orders.setPayment');
-    if (!data) throw notFound(`No existe el pedido ${code}.`);
-    return toOrder(data as unknown as OrderRow);
-  },
-
-  async updateStatus(code, status) {
-    const { data, error } = await getSupabase()
-      .from(TABLE)
-      .update({ status })
-      .eq('code', code)
-      .select(COLUMNS)
-      .maybeSingle();
-    if (error) throw toHttpError(error, 'orders.updateStatus');
-    if (!data) throw notFound(`No existe el pedido ${code}.`);
-    return toOrder(data as unknown as OrderRow);
-  },
+  updateStatus: (code, status) => patch(code, { status }, 'orders.updateStatus'),
 };
+
+/**
+ * Escribir unas columnas de un pedido y devolverlo entero.
+ *
+ * Los tres métodos que modifican un pedido eran el mismo cuerpo —update, filtro
+ * por código, select, `maybeSingle`, 404 si no estaba, mapeo— con un patch
+ * distinto. Lo único que varía es eso, así que es lo único que se pasa.
+ */
+const patch = async (
+  code: string,
+  changes: Partial<OrderRow>,
+  operation: string,
+): Promise<Order> =>
+  toOrder(
+    rowOf<OrderRow>(
+      await getSupabase().from(TABLE).update(changes).eq('code', code).select(COLUMNS).maybeSingle(),
+      operation,
+      `No existe el pedido ${code}.`,
+    ),
+  );

@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { formatPrice } from '@shared/domain/money.js';
+import { formatPrice } from '@shared/domain/money';
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_CATEGORY_LABELS,
@@ -8,9 +8,9 @@ import {
   type ProductCategory,
   type ProductColor,
   type ProductInput,
-} from '@shared/domain/product.js';
-import { SIZE_CHARTS, SIZE_CHART_IDS, type SizeChartId } from '@shared/domain/sizeCharts.js';
-import { productInputSchema } from '@shared/schemas/product.schema.js';
+} from '@shared/domain/product';
+import { SIZE_CHARTS, SIZE_CHART_IDS, type SizeChartId } from '@shared/domain/sizeCharts';
+import { productInputSchema } from '@shared/schemas/product.schema';
 import { errorMessage } from '@/services/apiError';
 import { catalogService } from '@/services/catalogService';
 import { fieldErrorsFromApi, fieldErrorsFromZod } from '@/utils/formErrors';

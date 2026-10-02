@@ -1,5 +1,5 @@
-import { formatPrice } from '@shared/domain/money.js';
-import { sizeRangeLabel, type Product } from '@shared/domain/product.js';
+import { formatPrice } from '@shared/domain/money';
+import { sizeRangeLabel, type Product } from '@shared/domain/product';
 import { EmptyState } from '@/ui';
 import { Picture } from '@/ui/Picture';
 import styles from './ProductTable.module.css';

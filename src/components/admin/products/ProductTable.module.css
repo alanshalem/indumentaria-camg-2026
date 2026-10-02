@@ -62,7 +62,7 @@
   height: 46px;
   object-fit: cover;
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--color-white);
 }
 
 .inactiveRow {
@@ -156,7 +156,7 @@
 .active {
   background: rgba(35, 165, 90, 0.16);
   border-color: rgba(35, 165, 90, 0.5);
-  color: #7ee2a8;
+  color: var(--color-success);
 }
 
 .inactive {
@@ -199,7 +199,7 @@
 }
 
 .danger:hover:not(:disabled) {
-  color: #ff6b6b;
+  color: var(--color-danger-strong);
   border-color: rgba(255, 107, 107, 0.6);
   background: rgba(255, 107, 107, 0.12);
 }
@@ -228,6 +228,6 @@
 
 /* Variantes agotadas: el producto se sigue vendiendo, pero a pedido. */
 .iconButton.warn {
-  color: #fbbf24;
+  color: var(--color-warning);
   border-color: rgba(245, 158, 11, 0.5);
 }

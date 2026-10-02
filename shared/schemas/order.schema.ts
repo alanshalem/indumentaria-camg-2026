@@ -125,9 +125,6 @@ export const orderQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-export type CreateOrderDto = z.infer<typeof createOrderSchema>;
-export type UpdateOrderDto = z.infer<typeof updateOrderSchema>;
-export type DeliverItemDto = z.infer<typeof deliverItemSchema>;
 export type OrderPaymentDto = z.infer<typeof orderPaymentSchema>;
 export type OrderQueryDto = z.infer<typeof orderQuerySchema>;
 

@@ -74,7 +74,7 @@
 
 .blockError {
   font-size: 0.82rem;
-  color: #ff8ca3;
+  color: var(--color-error);
 }
 
 /* --- Talles ----------------------------------------------------------------- */

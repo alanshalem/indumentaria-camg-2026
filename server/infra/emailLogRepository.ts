@@ -1,7 +1,7 @@
 import type { EmailKind, EmailLogRecord } from '../../shared/domain/orderEmails.js';
 
 export type { EmailLogRecord };
-import { toHttpError } from './postgrestError.js';
+import { rowsOf } from './postgrestResult.js';
 import { getSupabase } from './supabaseClient.js';
 
 const TABLE = 'email_log';
@@ -18,6 +18,19 @@ export interface EmailLogEntry {
   error?: string | null;
 }
 
+/** Las columnas tal como las devuelve `email_log`. */
+interface SentKindRow {
+  kind: EmailKind;
+}
+
+interface HistoryRow {
+  kind: EmailKind;
+  status: EmailLogStatus;
+  recipient: string;
+  error: string | null;
+  created_at: string;
+}
+
 export interface EmailLogRepository {
   /** Qué avisos ya salieron para este pedido. Base de la idempotencia. */
   sentKinds(orderCode: string): Promise<EmailKind[]>;
@@ -28,31 +41,28 @@ export interface EmailLogRepository {
 
 export const emailLogRepository: EmailLogRepository = {
   async sentKinds(orderCode) {
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .select('kind')
       .eq('order_code', orderCode)
       .eq('status', 'sent');
 
-    if (error) throw toHttpError(error, 'emailLog.sentKinds');
-    return (data ?? []).map((row) => row.kind as EmailKind);
+    return rowsOf<SentKindRow>(result, 'emailLog.sentKinds').map((row) => row.kind);
   },
 
   async history(orderCode) {
-    const { data, error } = await getSupabase()
+    const result = await getSupabase()
       .from(TABLE)
       .select('kind, status, recipient, error, created_at')
       .eq('order_code', orderCode)
       .order('created_at', { ascending: false });
 
-    if (error) throw toHttpError(error, 'emailLog.history');
-
-    return (data ?? []).map((row) => ({
-      kind: row.kind as EmailKind,
-      status: row.status as EmailLogStatus,
-      recipient: row.recipient as string,
-      error: (row.error as string | null) ?? null,
-      at: new Date(row.created_at as string).getTime(),
+    return rowsOf<HistoryRow>(result, 'emailLog.history').map((row) => ({
+      kind: row.kind,
+      status: row.status,
+      recipient: row.recipient,
+      error: row.error ?? null,
+      at: new Date(row.created_at).getTime(),
     }));
   },
 

@@ -70,7 +70,7 @@
 /* Cero es un estado real y visible: es lo que dispara "a pedido". */
 .zero {
   border-color: rgba(245, 158, 11, 0.6);
-  color: #fbbf24;
+  color: var(--color-warning);
 }
 
 .summary {

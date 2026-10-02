@@ -16,6 +16,21 @@
   --shadow-md: 0 6px 20px rgba(0,0,0,0.45);
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   --transition: 180ms ease;
+
+  /* Colores de estado. Faltaban justo los que más se repetían: el verde de
+     "hecho" estaba copiado 21 veces y el ámbar de «atención» 13, asi que
+     cambiar cualquiera de los dos era un buscar-y-reemplazar por 41 modulos. */
+  --color-success: #7ee2a8; /* Hecho, confirmado, entregado. Estaba copiado 21 veces. */
+  --color-success-bright: #6be3a3; /* La versión más viva: el pedido entregado en la tabla. */
+  --color-warning: #fbbf24; /* Atención, pendiente, a pedido. Estaba copiado 13 veces. */
+  --color-info: #93c5fd; /* Pago confirmado y Mercado Pago. */
+  --color-ready: #c4b5fd; /* Listo para retirar. */
+  --color-inert: #b8b8b8; /* Fuera del circuito: la marca de eliminado. */
+  --color-error: #ff8ca3; /* Texto de error: alertas y validación de campos. */
+  --color-danger: #ff8a8a; /* Acción destructiva al pasar el mouse. */
+  --color-danger-strong: #ff6b6b; /* Idem, donde el botón necesita mas peso. */
+  --color-whatsapp: #25d366; /* El verde de la marca. No es un color de estado. */
+  --color-photo-wash: #ededed; /* Fondo de las fotos de producto: se ve sobre blanco. */
 }
 
 * { box-sizing: border-box; }

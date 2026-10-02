@@ -22,7 +22,7 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #7ee2a8;
+  color: var(--color-success);
 }
 
 .text {
@@ -40,7 +40,7 @@
   align-self: flex-start;
   font-size: 0.84rem;
   font-weight: 600;
-  color: #7ee2a8;
+  color: var(--color-success);
   text-decoration: none;
 }
 

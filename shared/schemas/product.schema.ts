@@ -108,7 +108,4 @@ export const productImageUploadSchema = z.object({
   dataBase64: z.string().min(1).max(8_000_000),
 });
 
-export type ProductInputDto = z.infer<typeof productInputSchema>;
-export type ProductPatchDto = z.infer<typeof productPatchSchema>;
 export type ProductImageUploadDto = z.infer<typeof productImageUploadSchema>;
-export type StockGridDto = z.infer<typeof stockGridSchema>;

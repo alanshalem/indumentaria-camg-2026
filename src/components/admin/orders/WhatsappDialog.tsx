@@ -12,8 +12,8 @@ import {
   type WhatsappLogRecord,
   type WhatsappTemplate,
 } from '@shared/domain/whatsapp';
+import { useAdminAction } from '@/hooks/useAdminAction';
 import { useAsyncResource } from '@/hooks/useAsyncResource';
-import { errorMessage } from '@/services/apiError';
 import { orderService } from '@/services/orderService';
 import { formatDateTime } from '@/utils/formatDate';
 import { Alert, Button } from '@/ui';
@@ -39,49 +39,50 @@ export function WhatsappDialog({ order, onOrderChange }: Props) {
   const { data: history, set } = useAsyncResource(load, NO_HISTORY, [load]);
 
   const [link, setLink] = useState(order.paymentLink ?? '');
-  const [error, setError] = useState('');
-  const [isSavingLink, setIsSavingLink] = useState(false);
   const [preview, setPreview] = useState<WhatsappTemplate | null>(null);
+  // El mismo trío ocupado/aviso/error que el resto del panel. Antes esto tenía
+  // dos `try/catch` propios y su propio flag de guardado.
+  const { busyId, error, run } = useAdminAction();
 
   /** El último envío de cada plantilla, que es lo que el club quiere saber. */
   const lastOf = (template: WhatsappTemplate) =>
     history.find((record) => record.template === template) ?? null;
 
-  async function saveLink() {
-    setError('');
-    setIsSavingLink(true);
-    try {
-      onOrderChange(
-        await orderService.setPayment(order.code, {
-          method: order.paymentMethod ?? 'mercadopago',
-          link: link.trim() || null,
-        }),
-      );
-    } catch (caught) {
-      setError(errorMessage(caught, 'No se pudo guardar el link.'));
-    } finally {
-      setIsSavingLink(false);
-    }
-  }
+  const saveLink = () =>
+    void run(
+      'link',
+      async () =>
+        onOrderChange(
+          await orderService.setPayment(order.code, {
+            method: order.paymentMethod ?? 'mercadopago',
+            link: link.trim() || null,
+          }),
+        ),
+      null,
+      'No se pudo guardar el link.',
+    );
 
   /**
    * El registro se hace al abrir el chat, no al enviar: es lo que el navegador
    * nos deja saber. Si falla, no se bloquea la apertura — el mensaje importa
    * más que la anotación.
    */
-  async function open(template: WhatsappTemplate) {
+  function open(template: WhatsappTemplate) {
     // Se abre primero y en el mismo turno del click: si se espera al registro,
     // el navegador trata la pestaña como popup y la bloquea.
     window.open(whatsappMessageLink(template, order), '_blank', 'noopener,noreferrer');
 
-    try {
-      const updated = await orderService.recordWhatsapp(order.code, template);
-      set(() => updated);
-    } catch (caught) {
-      // El chat ya se abrió: que falle la anotación no es motivo para alarmar,
-      // pero tampoco para mentir diciendo que quedó registrado.
-      setError(errorMessage(caught, 'El mensaje se abrió, pero no se pudo registrar.'));
-    }
+    // El chat ya se abrió: que falle la anotación no es motivo para alarmar,
+    // pero tampoco para mentir diciendo que quedó registrado.
+    void run(
+      template,
+      async () => {
+        const updated = await orderService.recordWhatsapp(order.code, template);
+        set(() => updated);
+      },
+      null,
+      'El mensaje se abrió, pero no se pudo registrar.',
+    );
   }
 
   return (
@@ -125,7 +126,7 @@ export function WhatsappDialog({ order, onOrderChange }: Props) {
                       placeholder={CLUB.paymentLink}
                       aria-label="Link de cobro con el monto de este pedido"
                     />
-                    <Button variant="ghost" onClick={() => void saveLink()} loading={isSavingLink}>
+                    <Button variant="ghost" onClick={saveLink} loading={busyId === 'link'}>
                       Guardar
                     </Button>
                   </div>
@@ -159,7 +160,7 @@ export function WhatsappDialog({ order, onOrderChange }: Props) {
                 <pre className={styles.preview}>{whatsappMessage(template, order)}</pre>
               )}
 
-              <Button block onClick={() => void open(template)}>
+              <Button block onClick={() => open(template)} loading={busyId === template}>
                 Abrir WhatsApp
               </Button>
             </article>

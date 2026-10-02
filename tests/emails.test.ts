@@ -7,13 +7,12 @@ import {
   EMAIL_KINDS,
   emailKindForStatus,
   missedNoticeKinds,
-  type EmailKind,
 } from '../shared/domain/orderEmails';
 import { escapeHtml } from '../server/modules/emails/templates/layout';
 import { renderOrderEmail } from '../server/modules/emails/templates/index';
+import type { EmailLogRepository } from '../server/infra/emailLogRepository';
 import { createEmailsService } from '../server/modules/emails/emails.service';
-import type { EmailLogEntry, EmailLogRepository } from '../server/infra/emailLogRepository';
-import type { EmailMessage, EmailTransport, SendResult } from '../server/infra/emailTransport';
+import { fakeEmailLog, fakeOrders, fakeTransport, order } from './doubles';
 
 const club: ClubInfo = {
   ...CLUB,
@@ -29,54 +28,6 @@ const EMAIL: EmailConfig = {
   replyTo: null,
   siteUrl: 'https://camg.test',
 };
-
-const order = (overrides: Partial<Order> = {}): Order => ({
-  code: 'CAMG-2026-ABCDE',
-  timestamp: Date.UTC(2026, 7, 22, 15, 0, 0),
-  customerName: 'Ana María',
-  customerLastName: 'Pérez',
-  phone: '1123456789',
-  email: 'ana@ejemplo.com',
-  items: [
-    {
-      productId: 'campera-canguro',
-      productName: 'Campera Canguro CAMG',
-      size: 'M',
-      sizeTier: 'large',
-      color: null,
-      quantity: 2,
-      unitPrice: 54000,
-      backorderedUnits: 0,
-      delivered: false,
-    },
-    {
-      productId: 'remera-algodon',
-      productName: 'Remera de algodón',
-      size: '12',
-      sizeTier: 'small',
-      color: 'Roja',
-      quantity: 1,
-      unitPrice: 20500,
-      backorderedUnits: 0,
-      delivered: false,
-    },
-  ],
-  subtotal: 128500,
-  promotions: [
-    {
-      id: 'familia-camg',
-      kind: 'sameProductDifferentSize',
-      label: 'Promo familia CAMG',
-      detail: 'Remera: talles 12 y M',
-      amount: 2050,
-    },
-  ],
-  total: 126450,
-  status: 'pending',
-  paymentMethod: null,
-  paymentLink: null,
-  ...overrides,
-});
 
 // ---------------------------------------------------------------------------
 
@@ -298,41 +249,10 @@ describe('plantillas de mail', () => {
 
 // ---------------------------------------------------------------------------
 
-function fakeTransport(result: SendResult = { status: 'sent', providerId: 're_1' }) {
-  const sent: EmailMessage[] = [];
-  const transport: EmailTransport = {
-    send: async (message) => {
-      sent.push(message);
-      return result;
-    },
-  };
-  return { transport, sent };
-}
-
-function fakeLog(yaEnviados: EmailKind[] = []) {
-  const records: EmailLogEntry[] = [];
-  const repository: EmailLogRepository = {
-    sentKinds: async () => yaEnviados,
-    history: async () =>
-      records.map((entry) => ({
-        kind: entry.kind,
-        status: entry.status,
-        recipient: entry.recipient,
-        error: entry.error ?? null,
-        at: 0,
-      })),
-    record: async (entry) => {
-      records.push(entry);
-      if (entry.status === 'sent') yaEnviados.push(entry.kind);
-    },
-  };
-  return { repository, records };
-}
-
 describe('emailsService', () => {
   it('manda el aviso que corresponde al estado', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository, records } = fakeLog();
+    const { repository, records } = fakeEmailLog();
 
     await createEmailsService(transport, repository).notifyStatus(order({ status: 'ready' }));
 
@@ -344,7 +264,7 @@ describe('emailsService', () => {
 
   it('no manda nada cuando el estado no tiene aviso', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository } = fakeLog();
+    const { repository } = fakeEmailLog();
 
     await createEmailsService(transport, repository).notifyStatus(order({ status: 'delivered' }));
 
@@ -354,7 +274,7 @@ describe('emailsService', () => {
 
   it('no repite un aviso ya enviado', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository } = fakeLog(['paymentConfirmed']);
+    const { repository } = fakeEmailLog(['paymentConfirmed']);
 
     await createEmailsService(transport, repository).notifyStatus(order({ status: 'paid' }));
 
@@ -363,7 +283,7 @@ describe('emailsService', () => {
 
   it('registra el pedido sin email en vez de intentar enviarlo', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository, records } = fakeLog();
+    const { repository, records } = fakeEmailLog();
 
     await createEmailsService(transport, repository).notifyStatus(order({ email: null }));
 
@@ -373,7 +293,7 @@ describe('emailsService', () => {
 
   it('un fallo del proveedor queda registrado y no se propaga', async () => {
     const { transport } = fakeTransport({ status: 'failed', error: 'Resend respondió 500.' });
-    const { repository, records } = fakeLog();
+    const { repository, records } = fakeEmailLog();
 
     const notice = await createEmailsService(transport, repository).notifyStatus(order());
 
@@ -401,7 +321,7 @@ describe('emailsService', () => {
 describe('que se le aviso al socio', () => {
   it('notifyStatus devuelve el aviso que salio', async () => {
     const { transport } = fakeTransport();
-    const { repository } = fakeLog();
+    const { repository } = fakeEmailLog();
 
     const notice = await createEmailsService(transport, repository).notifyStatus(
       order({ status: 'paid' }),
@@ -416,7 +336,7 @@ describe('que se le aviso al socio', () => {
 
   it('avisa que ya se habia mandado en vez de callarse', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository } = fakeLog(['paymentConfirmed']);
+    const { repository } = fakeEmailLog(['paymentConfirmed']);
 
     const notice = await createEmailsService(transport, repository).notifyStatus(
       order({ status: 'paid' }),
@@ -428,7 +348,7 @@ describe('que se le aviso al socio', () => {
 
   it('un estado sin aviso devuelve null, que no es lo mismo que un fallo', async () => {
     const { transport } = fakeTransport();
-    const { repository } = fakeLog();
+    const { repository } = fakeEmailLog();
 
     const notice = await createEmailsService(transport, repository).notifyStatus(
       order({ status: 'delivered' }),
@@ -440,7 +360,7 @@ describe('que se le aviso al socio', () => {
   it('missedNotices lista los avisos de etapas ya pasadas que nunca salieron', async () => {
     const { transport } = fakeTransport();
     // Caso real: el admin marco "Entregado" directo desde "Pendiente".
-    const { repository } = fakeLog(['orderReceived']);
+    const { repository } = fakeEmailLog(['orderReceived']);
 
     const missed = await createEmailsService(transport, repository).missedNotices(
       order({ status: 'delivered' }),
@@ -477,27 +397,19 @@ describe('missedNoticeKinds', () => {
 });
 
 describe('vista previa de las plantillas', () => {
-  const fakeOrders = (existente: Order | null) =>
-    ({
-      findByCode: async () => existente,
-      list: async () => ({ orders: [], total: 0 }),
-      summary: async () => ({ revenue: 0, discounts: 0, open: 0, counted: 0 }),
-      create: async (o: Order) => o,
-      updateStatus: async () => {
-        throw new Error('no usado');
-      },
-    }) as unknown as Parameters<typeof createEmailsService>[2];
+  const ordersWith = (existente: Order | null) =>
+    fakeOrders(existente ? [existente] : []);
 
   const service = (existente: Order | null = null) => {
     const { transport } = fakeTransport();
-    const { repository } = fakeLog();
-    return createEmailsService(transport, repository, fakeOrders(existente));
+    const { repository } = fakeEmailLog();
+    return createEmailsService(transport, repository, ordersWith(existente));
   };
 
   it('sin codigo usa el pedido de ejemplo y no manda nada', async () => {
     const { transport, sent } = fakeTransport();
-    const { repository } = fakeLog();
-    const svc = createEmailsService(transport, repository, fakeOrders(null));
+    const { repository } = fakeEmailLog();
+    const svc = createEmailsService(transport, repository, ordersWith(null));
 
     const preview = await svc.preview('orderReceived', 'pending');
 

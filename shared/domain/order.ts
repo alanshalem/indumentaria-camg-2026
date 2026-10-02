@@ -50,6 +50,21 @@ export const countsForBilling = (status: OrderStatus): boolean => !isCancelled(s
 export const isOpenOrder = (status: OrderStatus): boolean =>
   status !== 'delivered' && !isCancelled(status);
 
+/**
+ * A partir de acá el pedido es un compromiso del socio y el club le puede
+ * encargar la prenda al proveedor. Es la línea que separa eso de lo que
+ * todavía es una intención.
+ *
+ * Un pedido eliminado no cuenta nunca, aunque haya pasado por estados
+ * posteriores a "pendiente".
+ *
+ * Vive en el dominio y no en el exportador de Excel —donde estaba— porque es
+ * la regla más cara del sistema: si se equivoca, el club compra mercadería de
+ * pedidos que no se concretaron.
+ */
+export const isConfirmed = (status: OrderStatus): boolean =>
+  status !== 'pending' && countsForBilling(status);
+
 /** Línea del pedido: snapshot inmutable del producto al momento de la compra. */
 export interface OrderItem {
   productId: string;
@@ -160,6 +175,18 @@ export const isBackordered = (item: Pick<OrderItem, 'backorderedUnits'>): boolea
 export const hasBackorder = (order: Pick<Order, 'items'>): boolean =>
   order.items.some(isBackordered);
 
+/**
+ * La variante de una línea: `M · Roja`, o sólo `M` si el producto no tiene
+ * colores.
+ *
+ * Estaba escrito por separado en el dominio, en la plantilla de mail y en el
+ * JSX del panel. Los tres daban el mismo texto por casualidad, no porque algo
+ * lo garantizara. El Excel queda afuera a propósito: ahí talle y color son
+ * columnas separadas porque el club filtra y ordena por cada una.
+ */
+export const variantLabel = (item: Pick<OrderItem, 'size' | 'color'>): string =>
+  [item.size, item.color].filter(Boolean).join(' · ');
+
 /** Etiqueta de una línea para tablas y CSV: "2× Remera (M · Roja)". */
 export const describeItem = (item: OrderItem): string =>
-  `${item.quantity}× ${item.productName} (${[item.size, item.color].filter(Boolean).join(' · ')})`;
+  `${item.quantity}× ${item.productName} (${variantLabel(item)})`;

@@ -1,6 +1,11 @@
 import { CLUB } from '../../../../shared/domain/club.js';
 import { formatPrice } from '../../../../shared/domain/money.js';
-import { countOrderUnits, isBackordered, type Order } from '../../../../shared/domain/order.js';
+import {
+  countOrderUnits,
+  isBackordered,
+  variantLabel,
+  type Order,
+} from '../../../../shared/domain/order.js';
 import { ON_DEMAND_NOTICE } from '../../../../shared/domain/stock.js';
 
 /**
@@ -184,7 +189,7 @@ export const infoBox = (title: string, rows: readonly (readonly [string, string]
 export function itemsTable(order: Order): string {
   const rows = order.items
     .map((item) => {
-      const detail = [item.size, item.color].filter(Boolean).join(' · ');
+      const detail = variantLabel(item);
       // La prenda que salió a pedido lo dice en su propia línea: el socio ve
       // el plazo pegado a lo que lo tiene esperando, no en una nota al pie.
       const aPedido = isBackordered(item)

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { Order, OrderItem } from '../shared/domain/order';
+import { isConfirmed, type Order, type OrderItem } from '../shared/domain/order';
 import { compareSizes } from '../shared/domain/product';
 import {
   buildOrdersWorkbook,
-  isConfirmed,
   summarizeByProduct,
   type ExportContext,
 } from '../src/utils/ordersWorkbook';

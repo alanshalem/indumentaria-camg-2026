@@ -21,7 +21,7 @@
   display: block;
   aspect-ratio: 4 / 3;
   /* Las fotos vienen con fondo blanco: se acompaña en vez de pelear con él. */
-  background: linear-gradient(160deg, #ffffff 0%, #ededed 100%);
+  background: linear-gradient(160deg, var(--color-white) 0%, var(--color-photo-wash) 100%);
   overflow: hidden;
 }
 
@@ -167,5 +167,5 @@
   background: rgba(245, 158, 11, 0.1);
   font-size: 0.78rem;
   line-height: 1.4;
-  color: #fbbf24;
+  color: var(--color-warning);
 }

@@ -38,7 +38,7 @@
   /* El celeste es el de Mercado Pago: el socio reconoce a dónde va antes de
      apretar. */
   background: #009ee3;
-  color: #fff;
+  color: var(--color-white);
   font-size: 0.95rem;
   font-weight: 700;
   transition: background var(--transition);

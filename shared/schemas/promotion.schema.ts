@@ -69,5 +69,3 @@ export const promotionInputSchema = z.object({
 
 export type PromotionInputDto = z.infer<typeof promotionInputSchema>;
 export type PromotionPatchDto = z.infer<typeof promotionPatchSchema>;
-export type ComboConfigDto = z.infer<typeof comboConfigSchema>;
-export type SameProductConfigDto = z.infer<typeof sameProductConfigSchema>;

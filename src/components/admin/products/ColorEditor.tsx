@@ -1,4 +1,4 @@
-import type { ProductColor } from '@shared/domain/product.js';
+import type { ProductColor } from '@shared/domain/product';
 import { Button } from '@/ui';
 import { ImagePicker } from './ImagePicker';
 import styles from './ColorEditor.module.css';

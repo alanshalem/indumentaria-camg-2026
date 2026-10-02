@@ -83,7 +83,7 @@
 .done .marker {
   border-color: rgba(35, 165, 90, 0.6);
   background: rgba(35, 165, 90, 0.16);
-  color: #7ee2a8;
+  color: var(--color-success);
 }
 
 .done .label {
