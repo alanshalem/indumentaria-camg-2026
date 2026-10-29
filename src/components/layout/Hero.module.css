@@ -60,13 +60,7 @@
   width: 180px;
   height: 180px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 24px rgba(220,20,60,0.35));
-  animation: float 6s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  filter: drop-shadow(0 8px 24px rgba(220, 20, 60, 0.35));
 }
 
 @media (min-width: 768px) {
