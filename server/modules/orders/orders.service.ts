@@ -115,18 +115,17 @@ export function createOrdersService(
         };
         try {
           const saved = await orders.create(order);
-          // El pedido ya está guardado: el aviso es un efecto posterior que
-          // nunca puede hacer fallar el checkout.
           await emails.notifyStatus(saved);
 
-          // El mismo token que va en el mail. Se lo damos a quien acaba de
-          // generar el pedido para que el navegador pueda guardarlo y volver
-          // al seguimiento sin depender de encontrar el mail.
           return { order: saved, statusToken: signOrderToken(saved.code) };
         } catch (error) {
-          if (!isHttpError(error) || error.code !== 'CONFLICT') throw error;
+          if (!isHttpError(error) || error.code !== 'CONFLICT') {
+            await stock.restore(toRestorable(items));
+            throw error;
+          }
         }
       }
+      await stock.restore(toRestorable(items));
       throw internalError('No se pudo generar un código de pedido único. Reintentá.');
     },
 
@@ -146,12 +145,32 @@ export function createOrdersService(
     whatsappHistory: (code) => whatsapp.history(code),
 
     async updateStatus(code, status) {
+      const existing = await orders.findByCode(code);
+      if (!existing) throw notFound(`No existe el pedido ${code}.`);
+
+      if (existing.status !== status) {
+        if (status === 'cancelled') {
+          // Si el pedido se elimina, restaurar las unidades físicas que tenía tomadas
+          const toRestore = toRestorable(existing.items);
+          if (toRestore.length > 0) {
+            await stock.restore(toRestore);
+          }
+        } else if (existing.status === 'cancelled') {
+          // Si se recupera un pedido eliminado, re-consumir el stock
+          const toConsume = toRestorable(existing.items);
+          if (toConsume.length > 0) {
+            const reConsumed = await stock.consume(toConsume);
+            const updatedItems = existing.items.map((item, idx) => ({
+              ...item,
+              backorderedUnits: reConsumed[idx]?.backorder ?? 0,
+            }));
+            await orders.updateOrder(code, { items: updatedItems as any });
+          }
+        }
+      }
+
       const order = await orders.updateStatus(code, status);
       const notice = await emails.notifyStatus(order);
-
-      // Lo que el socio nunca recibió. Saltear etapas —marcar "Entregado" sin
-      // pasar por "Pago confirmado"— deja esos avisos sin mandar para siempre;
-      // devolverlos es la única forma de que el panel lo pueda decir.
       const missed = await emails.missedNotices(order);
 
       return { order, notice, missed };
@@ -162,23 +181,14 @@ export function createOrdersService(
       if (!existing) throw notFound(`No existe el pedido ${code}.`);
 
       // 1. Restaurar las unidades físicas que se habían descontado en el pedido anterior.
-      const toRestore: StockRequest[] = [];
-      for (const line of existing.items) {
-        const taken = Math.max(0, line.quantity - (line.backorderedUnits ?? 0));
-        if (taken > 0) {
-          toRestore.push({
-            productId: line.productId,
-            size: line.size,
-            color: line.color,
-            quantity: taken,
-          });
-        }
-      }
+      const toRestore = toRestorable(existing.items);
       if (toRestore.length > 0) {
         await stock.restore(toRestore);
       }
 
-      // 2. Resolver productos y talles para los nuevos items.
+      let itemsWithStock: OrderItem[] = [];
+      try {
+        // 2. Resolver productos y talles para los nuevos items.
       const productIds = [...new Set(input.items.map((i) => i.productId))];
       const catalog = await products.findManyByIds(productIds);
 
@@ -218,7 +228,7 @@ export function createOrdersService(
       });
 
       // 3. Descontar el stock según las nuevas variantes y cantidades.
-      const itemsWithStock = await applyStock(priced, stock);
+      itemsWithStock = await applyStock(priced, stock);
 
       // 4. Calcular subtotal y total respetando montos explícitos si fueron ingresados.
       const computedSubtotal = computeSubtotal(itemsWithStock);
@@ -226,7 +236,7 @@ export function createOrdersService(
       const total = input.total !== undefined ? input.total : subtotal;
 
       // 5. Persistir en la base y devolver el pedido actualizado.
-      return orders.updateOrder(code, {
+      return await orders.updateOrder(code, {
         items: itemsWithStock,
         subtotal,
         total,
@@ -235,6 +245,19 @@ export function createOrdersService(
         ...(input.phone !== undefined ? { phone: input.phone } : {}),
         ...(input.email !== undefined ? { email: input.email } : {}),
       });
+      } catch (error) {
+        // Compensación atómica:
+        // Si se alcanzaron a tomar unidades nuevas, devolverlas al stock físico
+        const newlyConsumed = toRestorable(itemsWithStock);
+        if (newlyConsumed.length > 0) {
+          await stock.restore(newlyConsumed);
+        }
+        // Re-consumir el stock del pedido original para dejar el inventario como estaba
+        if (toRestore.length > 0) {
+          await stock.consume(toRestore);
+        }
+        throw error;
+      }
     },
   };
 }
@@ -339,3 +362,21 @@ function resolveColor(product: Product, requested: string | null, at: string): s
 }
 
 export const ordersService = createOrdersService();
+
+
+/** Extrae las unidades físicas reales que fueron tomadas del stock para una lista de líneas. */
+function toRestorable(items: readonly OrderItem[]): StockRequest[] {
+  const result: StockRequest[] = [];
+  for (const line of items) {
+    const taken = Math.max(0, line.quantity - (line.backorderedUnits ?? 0));
+    if (taken > 0) {
+      result.push({
+        productId: line.productId,
+        size: line.size,
+        color: line.color,
+        quantity: taken,
+      });
+    }
+  }
+  return result;
+}

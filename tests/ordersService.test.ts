@@ -653,3 +653,115 @@ describe('ordersService.updateOrder', () => {
     expect(stock.disponible['campera-canguro|L|']).toBe(4);
   });
 });
+
+describe('ordersService · atomicidad y compensación de stock', () => {
+  it('restaura el stock físico cuando un pedido pasa a cancelled', async () => {
+    const stock = fakeStock({ 'campera-canguro|M|': 5 });
+    const orders = fakeOrders();
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repository,
+    );
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 2 }],
+    });
+
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
+
+    await service.updateStatus(order.code, 'cancelled');
+
+    // Al cancelarse, las 2 unidades físicas tomadas vuelven al inventario
+    expect(stock.disponible['campera-canguro|M|']).toBe(5);
+  });
+
+  it('re-consume stock si un pedido cancelado se restaura', async () => {
+    const stock = fakeStock({ 'campera-canguro|M|': 5 });
+    const orders = fakeOrders();
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repository,
+    );
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 2 }],
+    });
+
+    await service.updateStatus(order.code, 'cancelled');
+    expect(stock.disponible['campera-canguro|M|']).toBe(5);
+
+    await service.updateStatus(order.code, 'pending');
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
+  });
+
+  it('compensa y restaura el stock si la persistencia de un pedido nuevo falla', async () => {
+    const stock = fakeStock({ 'campera-canguro|M|': 5 });
+    const orders = fakeOrders();
+    orders.create = async () => {
+      throw new Error('fallo de base de datos');
+    };
+
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repository,
+    );
+
+    await expect(
+      service.create({
+        ...CUSTOMER,
+        items: [{ productId: 'campera-canguro', size: 'M', quantity: 2 }],
+      }),
+    ).rejects.toThrow('fallo de base de datos');
+
+    // El stock fue consumido y luego compensado: vuelve a ser 5
+    expect(stock.disponible['campera-canguro|M|']).toBe(5);
+  });
+
+  it('compensa y recupera el stock anterior si la edición falla', async () => {
+    const stock = fakeStock({
+      'campera-canguro|M|': 5,
+      'campera-canguro|L|': 5,
+    });
+    const orders = fakeOrders();
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repository,
+    );
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 2 }],
+    });
+
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
+
+    // Forzamos que updateOrder falle
+    orders.updateOrder = async () => {
+      throw new Error('error al guardar en db');
+    };
+
+    await expect(
+      service.updateOrder(order.code, {
+        items: [{ productId: 'campera-canguro', size: 'L', quantity: 2 }],
+      }),
+    ).rejects.toThrow('error al guardar en db');
+
+    // M debe volver a tener 3 (se restauró el estado previo por compensación), L sigue en 5
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
+    expect(stock.disponible['campera-canguro|L|']).toBe(5);
+  });
+});
