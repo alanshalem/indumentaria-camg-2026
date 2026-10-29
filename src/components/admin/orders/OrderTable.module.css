@@ -503,3 +503,27 @@
   white-space: nowrap;
   vertical-align: middle;
 }
+
+
+.edit {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.edit:hover:not(:disabled) {
+  background: rgba(220, 20, 60, 0.12);
+  border-color: rgba(220, 20, 60, 0.6);
+  color: var(--color-red-bright);
+}
+
+.edit:disabled {
+  opacity: 0.4;
+}

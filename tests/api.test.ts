@@ -116,6 +116,7 @@ describe('autorización', () => {
     ['GET', ROUTES.orders.collection],
     ['GET', ROUTES.orders.summary],
     ['PATCH', ROUTES.orders.byCode('CAMG-2026-ABCDE')],
+    ['PUT', ROUTES.orders.byCode('CAMG-2026-ABCDE')],
     ['PATCH', ROUTES.orders.items('CAMG-2026-ABCDE')],
     ['PATCH', ROUTES.orders.payment('CAMG-2026-ABCDE')],
     ['GET', ROUTES.orders.whatsapp('CAMG-2026-ABCDE')],
@@ -423,6 +424,30 @@ describe('PATCH /orders/:code · el estado sí avisa', () => {
   });
 });
 
+describe('PUT /orders/:code', () => {
+  it('un admin puede editar los artículos y montos del pedido', async () => {
+    const api = conCatalogo();
+    const creado = dataOf<OrderCreated>(
+      await api.request('POST', ROUTES.orders.collection, { body: UN_PEDIDO }),
+    ).order;
+
+    const response = await api.admin('PUT', ROUTES.orders.byCode(creado.code), {
+      body: {
+        customerName: 'Tobias',
+        items: [{ productId: 'campera-canguro', size: '12', quantity: 2, unitPrice: 35000 }],
+        total: 70000,
+      },
+    });
+
+    expect(response.status).toBe(200);
+    const actualizado = dataOf<Order>(response);
+    expect(actualizado.customerName).toBe('Tobias');
+    expect(actualizado.items[0]?.size).toBe('12');
+    expect(actualizado.items[0]?.unitPrice).toBe(35000);
+    expect(actualizado.total).toBe(70000);
+  });
+});
+
 describe('PATCH /orders/:code/payment', () => {
   it('guarda el método que corrigió el club', async () => {
     const api = testApi({ orders: [order({ paymentMethod: 'mercadopago' })] });
@@ -599,6 +624,7 @@ describe('el router de producción', () => {
     ['GET', ROUTES.orders.summary],
     ['GET', ROUTES.orders.byCode('CAMG-2026-ABCDE')],
     ['PATCH', ROUTES.orders.byCode('CAMG-2026-ABCDE')],
+    ['PUT', ROUTES.orders.byCode('CAMG-2026-ABCDE')],
     ['PATCH', ROUTES.orders.items('CAMG-2026-ABCDE')],
     ['PATCH', ROUTES.orders.payment('CAMG-2026-ABCDE')],
     ['GET', ROUTES.orders.whatsapp('CAMG-2026-ABCDE')],

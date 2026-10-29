@@ -69,6 +69,28 @@ export const createOrderSchema = z.object({
     .max(MAX_LINES_PER_ORDER),
 });
 
+export const editOrderItemSchema = z.object({
+  productId: z.string().trim().min(1),
+  size: z.string().trim().min(1).max(16),
+  color: z.string().trim().max(30).nullish().default(null),
+  quantity: z.number().int().min(1).max(MAX_UNITS_PER_LINE),
+  unitPrice: z.number().int().min(0).max(10_000_000).optional(),
+  delivered: z.boolean().optional(),
+});
+
+export const editOrderSchema = z.object({
+  customerName: personName('el nombre').optional(),
+  customerLastName: personName('el apellido').optional(),
+  phone: phoneSchema.optional(),
+  email: emailSchema.optional().nullable(),
+  items: z
+    .array(editOrderItemSchema, 'Falta el detalle del pedido')
+    .min(1, 'El pedido debe tener al menos un artículo')
+    .max(MAX_LINES_PER_ORDER),
+  subtotal: z.number().int().min(0).max(100_000_000).optional(),
+  total: z.number().int().min(0).max(100_000_000).optional(),
+});
+
 export const orderStatusSchema = z.enum(ORDER_STATUSES);
 
 /** Marcar una línea como entregada. Control interno: no manda ningún mail. */
@@ -125,6 +147,7 @@ export const orderQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+export type EditOrderDto = z.input<typeof editOrderSchema>;
 export type OrderPaymentDto = z.infer<typeof orderPaymentSchema>;
 export type OrderQueryDto = z.infer<typeof orderQuerySchema>;
 

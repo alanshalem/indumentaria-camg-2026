@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import {
+  computeSubtotal,
   toPublicOrder,
   type CreateOrderInput,
   type Order,
@@ -16,13 +17,13 @@ import type {
 import { generateOrderCode } from '../../../shared/domain/orderCode.js';
 import { priceForTier, sizeTierOf, type Product } from '../../../shared/domain/product.js';
 import { evaluatePromotions, expandUnits, type PricedUnit } from '../../../shared/domain/promotions.js';
-import type { OrderQueryDto } from '../../../shared/schemas/order.schema.js';
+import type { EditOrderDto, OrderQueryDto } from '../../../shared/schemas/order.schema.js';
 import { conflict, internalError, isHttpError, notFound, validationError } from '../../http/errors.js';
 import { signOrderToken, verifyOrderToken } from '../../security/orderToken.js';
 import { orderRepository, type OrderRepository } from '../../infra/orderRepository.js';
 import { productRepository, type ProductRepository } from '../../infra/productRepository.js';
 import { promotionRepository, type PromotionRepository } from '../../infra/promotionRepository.js';
-import { stockRepository, type StockRepository } from '../../infra/stockRepository.js';
+import { stockRepository, type StockRepository, type StockRequest } from '../../infra/stockRepository.js';
 import {
   whatsappLogRepository,
   type WhatsappLogRecord,
@@ -51,6 +52,8 @@ export interface OrdersService {
   /** Registra que se preparó un mensaje y devuelve el historial actualizado. */
   recordWhatsapp(code: string, template: WhatsappTemplate): Promise<WhatsappLogRecord[]>;
   whatsappHistory(code: string): Promise<WhatsappLogRecord[]>;
+  /** Edición manual del pedido por parte del administrador. */
+  updateOrder(code: string, input: EditOrderDto): Promise<Order>;
 }
 
 export function createOrdersService(
@@ -152,6 +155,86 @@ export function createOrdersService(
       const missed = await emails.missedNotices(order);
 
       return { order, notice, missed };
+    },
+
+    async updateOrder(code, input) {
+      const existing = await orders.findByCode(code);
+      if (!existing) throw notFound(`No existe el pedido ${code}.`);
+
+      // 1. Restaurar las unidades físicas que se habían descontado en el pedido anterior.
+      const toRestore: StockRequest[] = [];
+      for (const line of existing.items) {
+        const taken = Math.max(0, line.quantity - (line.backorderedUnits ?? 0));
+        if (taken > 0) {
+          toRestore.push({
+            productId: line.productId,
+            size: line.size,
+            color: line.color,
+            quantity: taken,
+          });
+        }
+      }
+      if (toRestore.length > 0) {
+        await stock.restore(toRestore);
+      }
+
+      // 2. Resolver productos y talles para los nuevos items.
+      const productIds = [...new Set(input.items.map((i) => i.productId))];
+      const catalog = await products.findManyByIds(productIds);
+
+      const priced: OrderItem[] = input.items.map((item, index) => {
+        const product = catalog.get(item.productId);
+        const at = `items.${index}`;
+
+        if (!product) {
+          throw validationError(`El producto "${item.productId}" no existe.`, {
+            [at]: 'Producto inexistente',
+          });
+        }
+
+        const tier = sizeTierOf(product, item.size);
+        if (!tier) {
+          throw validationError(`El talle ${item.size} no existe para "${product.name}".`, {
+            [at]: 'Talle inválido',
+          });
+        }
+
+        const color = resolveColor(product, item.color ?? null, at);
+        // Si el admin asignó un precio unitario (ej. al costo para profesores), se respeta ese;
+        // de lo contrario se usa el del catálogo según tier.
+        const unitPrice = item.unitPrice !== undefined ? item.unitPrice : priceForTier(product, tier);
+
+        return {
+          productId: product.id,
+          productName: product.name,
+          size: item.size,
+          sizeTier: tier,
+          color,
+          quantity: item.quantity,
+          unitPrice,
+          backorderedUnits: 0,
+          delivered: item.delivered ?? false,
+        };
+      });
+
+      // 3. Descontar el stock según las nuevas variantes y cantidades.
+      const itemsWithStock = await applyStock(priced, stock);
+
+      // 4. Calcular subtotal y total respetando montos explícitos si fueron ingresados.
+      const computedSubtotal = computeSubtotal(itemsWithStock);
+      const subtotal = input.subtotal !== undefined ? input.subtotal : computedSubtotal;
+      const total = input.total !== undefined ? input.total : subtotal;
+
+      // 5. Persistir en la base y devolver el pedido actualizado.
+      return orders.updateOrder(code, {
+        items: itemsWithStock,
+        subtotal,
+        total,
+        ...(input.customerName !== undefined ? { customer_name: input.customerName } : {}),
+        ...(input.customerLastName !== undefined ? { customer_last_name: input.customerLastName } : {}),
+        ...(input.phone !== undefined ? { phone: input.phone } : {}),
+        ...(input.email !== undefined ? { email: input.email } : {}),
+      });
     },
   };
 }

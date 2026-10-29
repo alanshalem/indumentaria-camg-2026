@@ -6,7 +6,7 @@ import {
   type OrderTotals,
 } from '@shared/api/contracts';
 import type { CreateOrderInput, Order, OrderStatus, PublicOrder } from '@shared/domain/order';
-import { EXPORT_PAGE_SIZE, type OrderFilters } from '@shared/schemas/order.schema';
+import { EXPORT_PAGE_SIZE, type EditOrderDto, type OrderFilters } from '@shared/schemas/order.schema';
 import type { EmailLogRecord } from '@shared/domain/orderEmails';
 import type { PaymentMethod } from '@shared/domain/payment';
 import type { WhatsappTemplate } from '@shared/domain/whatsapp';
@@ -39,7 +39,6 @@ export const orderService = {
   getPublic: (code: string, token: string) =>
     httpClient.get<PublicOrder>(ROUTES.orders.byCode(code), { query: { t: token } }),
 
-  /** Devuelve el pedido y qué aviso salió: el panel necesita poder decirlo. */
   /**
    * Totales del filtro completo. Van aparte del listado: sumar la página
    * visible daba el total de 50 pedidos, no el del recorte.
@@ -83,4 +82,8 @@ export const orderService = {
 
   updateStatus: (code: string, status: OrderStatus) =>
     httpClient.patch<OrderStatusUpdate>(ROUTES.orders.byCode(code), { status }),
+
+  /** Edición manual del pedido (artículos, talles, cantidades, montos, contacto). */
+  updateOrder: (code: string, input: EditOrderDto) =>
+    httpClient.put<Order>(ROUTES.orders.byCode(code), input),
 };

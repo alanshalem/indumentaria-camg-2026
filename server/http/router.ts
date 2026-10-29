@@ -24,6 +24,7 @@ export class Router {
 
   get = (pattern: string, handler: RouteHandler) => this.register('GET', pattern, handler);
   post = (pattern: string, handler: RouteHandler) => this.register('POST', pattern, handler);
+  put = (pattern: string, handler: RouteHandler) => this.register('PUT', pattern, handler);
   patch = (pattern: string, handler: RouteHandler) => this.register('PATCH', pattern, handler);
   delete = (pattern: string, handler: RouteHandler) => this.register('DELETE', pattern, handler);
 

@@ -2,6 +2,7 @@ import { ROUTES } from '../../../shared/api/contracts.js';
 import {
   createOrderSchema,
   deliverItemSchema,
+  editOrderSchema,
   orderCodeSchema,
   orderPaymentSchema,
   whatsappTemplateSchema,
@@ -103,6 +104,15 @@ export const makeOrderRoutes = (
         const code = parseOrThrow(orderCodeSchema, request.params.code, 'Código inválido');
         const { status } = parseOrThrow(updateOrderSchema, request.body, 'Estado inválido');
         return ok(await orders.updateStatus(code, status));
+      }),
+    )
+    // Edición completa del pedido por el administrador (artículos, talles, colores, cantidades, montos).
+    .put(
+      ROUTES.orders.pattern,
+      adminOnly(async (request) => {
+        const code = parseOrThrow(orderCodeSchema, request.params.code, 'Código inválido');
+        const input = parseOrThrow(editOrderSchema, request.body, 'Datos del pedido inválidos');
+        return ok(await orders.updateOrder(code, input));
       }),
     );
 

@@ -5,6 +5,7 @@ import { useAdminAction } from '@/hooks/useAdminAction';
 import { orderService } from '@/services/orderService';
 import { Alert, EmptyState, Modal } from '@/ui';
 import { DeleteOrderDialog } from './DeleteOrderDialog';
+import { EditOrderDialog } from './EditOrderDialog';
 import { OrderDetail } from './OrderDetail';
 import { OrderRow } from './OrderRow';
 import { WhatsappDialog } from './WhatsappDialog';
@@ -34,6 +35,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
   // que dice de qué pedido se trata.
   const [confirming, setConfirming] = useState<Order | null>(null);
   const [messaging, setMessaging] = useState<Order | null>(null);
+  const [editing, setEditing] = useState<Order | null>(null);
 
   const { busyId, notice, error, run } = useAdminAction();
 
@@ -108,6 +110,24 @@ export function OrderTable({ orders, onStatusChange }: Props) {
       </Modal>
 
       <Modal
+        size="lg"
+        isOpen={editing !== null}
+        onClose={() => setEditing(null)}
+        title={editing ? `Editar pedido ${editing.code} · ${customerFullName(editing)}` : 'Editar pedido'}
+      >
+        {editing && (
+          <EditOrderDialog
+            order={editing}
+            onCancel={() => setEditing(null)}
+            onSaved={(updated) => {
+              onStatusChange(updated);
+              setEditing(null);
+            }}
+          />
+        )}
+      </Modal>
+
+      <Modal
         isOpen={confirming !== null}
         onClose={() => setConfirming(null)}
         title="Eliminar pedido"
@@ -154,6 +174,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                     onStatusChange={(status) => changeStatus(order, status)}
                     onPaymentChange={(method) => changePayment(order, method)}
                     onMessages={() => setMessaging(order)}
+                    onEdit={() => setEditing(order)}
                     onDelete={() => setConfirming(order)}
                   />
                   {isOpen && (
@@ -163,6 +184,7 @@ export function OrderTable({ orders, onStatusChange }: Props) {
                       onDeliveredChange={(index, delivered) =>
                         changeDelivered(order, index, delivered)
                       }
+                      onEdit={() => setEditing(order)}
                     />
                   )}
                 </Fragment>

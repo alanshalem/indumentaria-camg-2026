@@ -10,6 +10,7 @@ import type { ProductRepository } from '../../server/infra/productRepository';
 import type { PromotionRepository } from '../../server/infra/promotionRepository';
 import type { StockRepository } from '../../server/infra/stockRepository';
 import type { WhatsappLogRepository } from '../../server/infra/whatsappLogRepository';
+import type { OrderRow } from '../../server/infra/mappers';
 
 /**
  * Dobles en memoria de cada repositorio.
@@ -22,7 +23,7 @@ import type { WhatsappLogRepository } from '../../server/infra/whatsappLogReposi
  * agrega un método al repositorio real.
  *
  * Cada fábrica devuelve también lo que el test necesita espiar (`saved`,
- * `records`, `consumido`), porque afirmar sobre el estado del doble es más
+ * `records`, `consumido`, `restaurado`), porque afirmar sobre el estado del doble es más
  * claro que contar llamadas.
  */
 
@@ -89,6 +90,17 @@ export function fakeOrders(seed: Order[] = []): OrderRepository & { saved: Order
       found.status = status;
       return found;
     },
+    updateOrder: async (code: string, changes: Partial<OrderRow>) => {
+      const found = find(code);
+      if (changes.customer_name !== undefined) found.customerName = changes.customer_name;
+      if (changes.customer_last_name !== undefined) found.customerLastName = changes.customer_last_name;
+      if (changes.phone !== undefined) found.phone = changes.phone ?? '';
+      if (changes.email !== undefined) found.email = changes.email ?? null;
+      if (changes.items !== undefined) found.items = (changes.items ?? []) as Order['items'];
+      if (changes.subtotal !== undefined) found.subtotal = changes.subtotal ?? 0;
+      if (changes.total !== undefined) found.total = changes.total ?? 0;
+      return found;
+    },
   };
 }
 
@@ -105,6 +117,7 @@ export const fakePromotions = (definitions: PromotionDefinition[] = []): Promoti
  */
 export function fakeStock(disponible: Record<string, number> = {}) {
   const consumido: string[] = [];
+  const restaurado: string[] = [];
   const repository: StockRepository = {
     consume: async (items) =>
       items.map((item) => {
@@ -120,8 +133,17 @@ export function fakeStock(disponible: Record<string, number> = {}) {
         consumido.push(`${key}:${taken}`);
         return { ...item, taken, backorder: item.quantity - taken, tracked: true };
       }),
+    restore: async (items) => {
+      for (const item of items) {
+        const key = `${item.productId}|${item.size}|${item.color ?? ''}`;
+        if (disponible[key] !== undefined) {
+          disponible[key] += item.quantity;
+          restaurado.push(`${key}:${item.quantity}`);
+        }
+      }
+    },
   };
-  return { repository, consumido, disponible };
+  return { repository, consumido, restaurado, disponible };
 }
 
 /**

@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { CartDrawer } from '@/components/cart/CartDrawer';
+import { FloatingWhatsapp } from '@/components/layout/FloatingWhatsapp';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { SizeChartViewer } from '@/components/products/SizeGuide';
@@ -26,6 +27,7 @@ export function App() {
       {!isAdminArea && <Footer />}
       {!isAdminArea && <CartDrawer />}
       {!isAdminArea && <SizeChartViewer />}
+      {!isAdminArea && <FloatingWhatsapp />}
     </div>
   );
 }

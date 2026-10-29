@@ -10,6 +10,7 @@ interface Props {
   /** La fila está esperando al servidor: no se puede marcar nada más. */
   isBusy: boolean;
   onDeliveredChange: (index: number, delivered: boolean) => void;
+  onEdit?: () => void;
 }
 
 /**
@@ -19,7 +20,7 @@ interface Props {
  * Vive aparte de la fila porque es otra cosa: la fila es un resumen que se
  * escanea, esto es la ficha que se lee.
  */
-export function OrderDetail({ order, isBusy, onDeliveredChange }: Props) {
+export function OrderDetail({ order, isBusy, onDeliveredChange, onEdit }: Props) {
   return (
     <tr className={styles.detailRow}>
       <td colSpan={ORDER_COLUMNS.length}>
@@ -93,6 +94,20 @@ export function OrderDetail({ order, isBusy, onDeliveredChange }: Props) {
             </div>
           )}
         </dl>
+
+        {onEdit && (
+          <div style={{ marginTop: '0.85rem' }}>
+            <button
+              type="button"
+              className={styles.expand}
+              onClick={onEdit}
+              disabled={isBusy}
+              style={{ fontWeight: 600 }}
+            >
+              ✏️ Editar artículos o montos del pedido
+            </button>
+          </div>
+        )}
 
         {/* Se pide recién al desplegar: no tiene sentido traer el historial de
             cien pedidos que nadie va a abrir. */}

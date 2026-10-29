@@ -549,3 +549,107 @@ describe('metodo de pago', () => {
     expect(order.paymentLink).toBeNull();
   });
 });
+
+
+describe('ordersService.updateOrder', () => {
+  it('permite cambiar talles, artículo y recalcula precios automáticamente', async () => {
+    const orders = fakeOrders();
+    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 1 }],
+    });
+
+    expect(order.items[0]?.unitPrice).toBe(54000);
+    expect(order.total).toBe(54000);
+
+    const updated = await service.updateOrder(order.code, {
+      items: [{ productId: 'campera-canguro', size: '12', quantity: 1 }],
+    });
+
+    expect(updated.items[0]?.size).toBe('12');
+    expect(updated.items[0]?.sizeTier).toBe('small');
+    expect(updated.items[0]?.unitPrice).toBe(48500);
+    expect(updated.subtotal).toBe(48500);
+    expect(updated.total).toBe(48500);
+  });
+
+  it('permite editar montos unitarios a mano (ej. al costo para profesores)', async () => {
+    const orders = fakeOrders();
+    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'L', quantity: 2 }],
+    });
+
+    expect(order.total).toBe(108000);
+
+    // Se vende al costo a un profe: $30.000 la unidad en vez de $54.000
+    const updated = await service.updateOrder(order.code, {
+      items: [{ productId: 'campera-canguro', size: 'L', quantity: 2, unitPrice: 30000 }],
+    });
+
+    expect(updated.items[0]?.unitPrice).toBe(30000);
+    expect(updated.subtotal).toBe(60000);
+    expect(updated.total).toBe(60000);
+  });
+
+  it('permite agregar y eliminar prendas del pedido', async () => {
+    const orders = fakeOrders();
+    const service = createOrdersService(orders, fakeProducts([product()]), fakePromotions(), fakeEmails());
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [
+        { productId: 'campera-canguro', size: 'L', quantity: 1 },
+        { productId: 'campera-canguro', size: 'M', quantity: 1 },
+      ],
+    });
+
+    expect(order.items).toHaveLength(2);
+
+    // Se elimina una y se aumenta la cantidad de la otra
+    const updated = await service.updateOrder(order.code, {
+      items: [{ productId: 'campera-canguro', size: 'L', quantity: 3 }],
+    });
+
+    expect(updated.items).toHaveLength(1);
+    expect(updated.items[0]?.quantity).toBe(3);
+    expect(updated.total).toBe(54000 * 3);
+  });
+
+  it('restaura el stock físico de la variante anterior y descuenta el de la nueva', async () => {
+    const stock = fakeStock({
+      'campera-canguro|M|': 5,
+      'campera-canguro|L|': 5,
+    });
+    const orders = fakeOrders();
+    const service = createOrdersService(
+      orders,
+      fakeProducts([product()]),
+      fakePromotions(),
+      fakeEmails(),
+      stock.repository,
+    );
+
+    const { order } = await service.create({
+      ...CUSTOMER,
+      items: [{ productId: 'campera-canguro', size: 'M', quantity: 2 }],
+    });
+
+    // M bajó a 3, L sigue en 5
+    expect(stock.disponible['campera-canguro|M|']).toBe(3);
+    expect(stock.disponible['campera-canguro|L|']).toBe(5);
+
+    // Se cambia el pedido a L
+    await service.updateOrder(order.code, {
+      items: [{ productId: 'campera-canguro', size: 'L', quantity: 1 }],
+    });
+
+    // M vuelve a tener 5, L baja a 4
+    expect(stock.disponible['campera-canguro|M|']).toBe(5);
+    expect(stock.disponible['campera-canguro|L|']).toBe(4);
+  });
+});

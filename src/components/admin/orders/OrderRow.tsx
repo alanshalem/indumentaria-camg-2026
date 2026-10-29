@@ -21,7 +21,7 @@ import {
 import { formatPhone, whatsappLink } from '@shared/domain/phone';
 import { ON_DEMAND_LEAD_TIME } from '@shared/domain/stock';
 import { formatOrderDate } from '@/utils/formatDate';
-import { TrashIcon, WhatsappIcon } from '@/ui/icons';
+import { PencilIcon, TrashIcon, WhatsappIcon } from '@/ui/icons';
 import styles from './OrderTable.module.css';
 
 /**
@@ -49,6 +49,7 @@ interface Props {
   onStatusChange: (status: OrderStatus) => void;
   onPaymentChange: (method: PaymentMethod | null) => void;
   onMessages: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }
 
@@ -61,6 +62,7 @@ export function OrderRow({
   onStatusChange,
   onPaymentChange,
   onMessages,
+  onEdit,
   onDelete,
 }: Props) {
   const saved = order.subtotal - order.total;
@@ -183,6 +185,17 @@ export function OrderRow({
             aria-expanded={isOpen}
           >
             {isOpen ? 'Ocultar' : 'Detalle'}
+          </button>
+
+          <button
+            type="button"
+            className={styles.edit}
+            onClick={onEdit}
+            disabled={isBusy}
+            title={`Editar artículos y montos de ${order.code}`}
+            aria-label={`Editar pedido ${order.code}`}
+          >
+            <PencilIcon />
           </button>
 
           {isCancelled(order.status) ? (

@@ -25,6 +25,10 @@ export interface StockRepository {
    * Nunca falla por falta de stock: eso es una decisión de negocio, no un error.
    */
   consume(items: readonly StockRequest[]): Promise<StockOutcome[]>;
+  /**
+   * Restaura unidades al stock físico al modificar o cancelar pedidos.
+   */
+  restore(items: readonly StockRequest[]): Promise<void>;
 }
 
 export const stockRepository: StockRepository = {
@@ -44,5 +48,45 @@ export const stockRepository: StockRepository = {
     });
 
     return rowsOf<StockOutcome>(result, 'stock.consume');
+  },
+
+  async restore(items) {
+    if (items.length === 0) return;
+
+    const supabase = getSupabase();
+    try {
+      const { error } = await supabase.rpc('restore_stock', {
+        p_items: items.map((item) => ({
+          productId: item.productId,
+          size: item.size,
+          color: item.color,
+          quantity: item.quantity,
+        })),
+      });
+      if (!error) return;
+    } catch {
+      // Si la RPC aún no existe en el entorno, fallback a update fila por fila
+    }
+
+    for (const item of items) {
+      if (item.quantity <= 0) continue;
+      const color = item.color ?? '';
+      const { data } = await supabase
+        .from('product_stock')
+        .select('units')
+        .eq('product_id', item.productId)
+        .eq('size', item.size)
+        .eq('color', color)
+        .maybeSingle();
+
+      if (data && typeof data.units === 'number') {
+        await supabase
+          .from('product_stock')
+          .update({ units: data.units + item.quantity, updated_at: new Date().toISOString() })
+          .eq('product_id', item.productId)
+          .eq('size', item.size)
+          .eq('color', color);
+      }
+    }
   },
 };

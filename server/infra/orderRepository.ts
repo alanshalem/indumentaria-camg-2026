@@ -27,6 +27,8 @@ export interface OrderRepository {
   setItemDelivered(code: string, index: number, delivered: boolean): Promise<Order>;
   /** Registra cómo paga el socio y, si aplica, el link de cobro. */
   setPayment(code: string, payment: OrderPaymentInput): Promise<Order>;
+  /** Modifica los campos editables del pedido (items, montos, datos de contacto). */
+  updateOrder(code: string, changes: Partial<OrderRow>): Promise<Order>;
 }
 
 /** Lo que el panel puede cambiar del pago. */
@@ -170,12 +172,14 @@ export const orderRepository: OrderRepository = {
     patch(code, { payment_method: payment.method, payment_link: payment.link }, 'orders.setPayment'),
 
   updateStatus: (code, status) => patch(code, { status }, 'orders.updateStatus'),
+
+  updateOrder: (code, changes) => patch(code, changes, 'orders.updateOrder'),
 };
 
 /**
  * Escribir unas columnas de un pedido y devolverlo entero.
  *
- * Los tres métodos que modifican un pedido eran el mismo cuerpo —update, filtro
+ * Los métodos que modifican un pedido comparten el mismo cuerpo —update, filtro
  * por código, select, `maybeSingle`, 404 si no estaba, mapeo— con un patch
  * distinto. Lo único que varía es eso, así que es lo único que se pasa.
  */
