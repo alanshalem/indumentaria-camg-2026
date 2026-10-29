@@ -59,13 +59,27 @@
 }
 
 .expand {
-  padding: 6px 10px;
+  height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
+  background: transparent;
   font-size: 0.82rem;
+  font-weight: 500;
   color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
 }
-.expand:hover { border-color: var(--color-red); color: var(--color-red-bright); }
+.expand:hover {
+  border-color: var(--color-red);
+  color: var(--color-red-bright);
+  background: rgba(220, 20, 60, 0.06);
+}
 
 .detailRow td {
   background: var(--color-bg);
@@ -251,8 +265,9 @@
 .rowActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-end;
+  white-space: nowrap;
 }
 
 .trash {
@@ -279,7 +294,12 @@
 }
 
 .restore {
-  padding: 6px 12px;
+  height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: transparent;
@@ -287,6 +307,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
+  cursor: pointer;
   transition: color var(--transition), border-color var(--transition);
 }
 
@@ -508,13 +529,15 @@
 .edit {
   width: 32px;
   height: 32px;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-muted);
+  cursor: pointer;
   transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 
@@ -526,4 +549,40 @@
 
 .edit:disabled {
   opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.detailActions {
+  display: flex;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.editOrderBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.editOrderBtn:hover:not(:disabled) {
+  border-color: var(--color-red);
+  color: var(--color-red-bright);
+  background: rgba(220, 20, 60, 0.08);
+}
+
+.editOrderBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

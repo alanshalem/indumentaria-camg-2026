@@ -169,6 +169,15 @@ export function OrderRow({
         <div className={styles.rowActions}>
           <button
             type="button"
+            className={styles.expand}
+            onClick={onToggleDetail}
+            aria-expanded={isOpen}
+          >
+            {isOpen ? 'Ocultar' : 'Detalle'}
+          </button>
+
+          <button
+            type="button"
             className={styles.whatsapp}
             onClick={onMessages}
             disabled={isBusy}
@@ -176,15 +185,6 @@ export function OrderRow({
             aria-label={`Mensajes de WhatsApp para ${order.code}`}
           >
             <WhatsappIcon />
-          </button>
-
-          <button
-            type="button"
-            className={styles.expand}
-            onClick={onToggleDetail}
-            aria-expanded={isOpen}
-          >
-            {isOpen ? 'Ocultar' : 'Detalle'}
           </button>
 
           <button

@@ -1,6 +1,7 @@
 import { formatPrice } from '@shared/domain/money';
 import { isBackordered, variantLabel, type Order } from '@shared/domain/order';
 import { ON_DEMAND_LEAD_TIME } from '@shared/domain/stock';
+import { PencilIcon } from '@/ui/icons';
 import { OrderEmailHistory } from './OrderEmailHistory';
 import { ORDER_COLUMNS } from './columns';
 import styles from './OrderTable.module.css';
@@ -96,15 +97,15 @@ export function OrderDetail({ order, isBusy, onDeliveredChange, onEdit }: Props)
         </dl>
 
         {onEdit && (
-          <div style={{ marginTop: '0.85rem' }}>
+          <div className={styles.detailActions}>
             <button
               type="button"
-              className={styles.expand}
+              className={styles.editOrderBtn}
               onClick={onEdit}
               disabled={isBusy}
-              style={{ fontWeight: 600 }}
             >
-              ✏️ Editar artículos o montos del pedido
+              <PencilIcon size={14} />
+              <span>Editar artículos o montos del pedido</span>
             </button>
           </div>
         )}
