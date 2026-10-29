@@ -70,27 +70,25 @@ export function OrderRow({
   return (
     <tr className={styles.row}>
       <td className={styles.code}>
-        {/* El prefijo se repite en todas las filas: se atenúa para que el ojo
-            vaya a lo que distingue al pedido. */}
-        <span className={styles.codePrefix}>{codePrefix(order.code)}</span>
-        {codeSuffix(order.code)}
-        {/* Que el club vea de un vistazo qué pedidos tienen algo encargado y no
-            dependa de abrir el detalle. */}
-        {hasBackorder(order) && (
-          <span
-            className={styles.backorder}
-            title={`Tiene prendas a pedido · entrega ${ON_DEMAND_LEAD_TIME}`}
-          >
-            A pedido
+        <div className={styles.codeCell}>
+          <span className={styles.codeText}>
+            <span className={styles.codePrefix}>{codePrefix(order.code)}</span>
+            {codeSuffix(order.code)}
           </span>
-        )}
-        {/* Entregado a medias: es el dato que el club pierde de vista si sólo
-            mira el estado del pedido. */}
-        {isPartiallyDelivered(order) && (
-          <span className={styles.partial} title="Hay prendas entregadas y prendas pendientes">
-            {deliveredCount(order)}/{order.items.length} entregado
-          </span>
-        )}
+          {hasBackorder(order) && (
+            <span
+              className={styles.backorder}
+              title={`Tiene prendas a pedido · entrega ${ON_DEMAND_LEAD_TIME}`}
+            >
+              A pedido
+            </span>
+          )}
+          {isPartiallyDelivered(order) && (
+            <span className={styles.partial} title="Hay prendas entregadas y prendas pendientes">
+              {deliveredCount(order)}/{order.items.length} entregado
+            </span>
+          )}
+        </div>
       </td>
 
       <td className={styles.date} title={formatOrderDate(order.timestamp).title}>
@@ -184,7 +182,7 @@ export function OrderRow({
             title={`Mandarle un mensaje a ${customerFullName(order)}`}
             aria-label={`Mensajes de WhatsApp para ${order.code}`}
           >
-            <WhatsappIcon />
+            <WhatsappIcon size={14} />
           </button>
 
           <button
@@ -195,7 +193,7 @@ export function OrderRow({
             title={`Editar artículos y montos de ${order.code}`}
             aria-label={`Editar pedido ${order.code}`}
           >
-            <PencilIcon />
+            <PencilIcon size={13} />
           </button>
 
           {isCancelled(order.status) ? (
@@ -217,7 +215,7 @@ export function OrderRow({
               aria-label={`Eliminar el pedido ${order.code}`}
               title="Eliminar este pedido"
             >
-              <TrashIcon />
+              <TrashIcon size={13} />
             </button>
           )}
         </div>

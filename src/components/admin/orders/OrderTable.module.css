@@ -8,23 +8,23 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.92rem;
-  min-width: 720px;
+  font-size: 0.85rem;
 }
 
 .table thead th {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   color: var(--color-muted);
-  padding: 14px 16px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-2);
+  white-space: nowrap;
 }
 
 .table tbody td {
-  padding: 14px 16px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
 }
@@ -32,6 +32,17 @@
 .row:hover td { background: rgba(220, 20, 60, 0.04); }
 
 .right { text-align: right; }
+
+.codeCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.codeText {
+  white-space: nowrap;
+}
 
 .code {
   font-family: 'Menlo', 'Consolas', monospace;
@@ -59,16 +70,16 @@
 }
 
 .expand {
-  height: 32px;
+  height: 28px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: transparent;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--color-text);
   white-space: nowrap;
@@ -208,8 +219,8 @@
 
 .statusSelect {
   width: auto;
-  min-width: 152px;
-  padding: 6px 28px 6px 10px;
+  min-width: 122px;
+  padding: 5px 22px 5px 8px;
   border-radius: 999px;
   border: 1px solid transparent;
   font-size: 0.76rem;
@@ -220,7 +231,7 @@
   appearance: none;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%239a9a9a' stroke-width='1.8'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 7px center;
 }
 
 .statusSelect:disabled {
@@ -265,14 +276,14 @@
 .rowActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   justify-content: flex-end;
   white-space: nowrap;
 }
 
 .trash {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -294,17 +305,17 @@
 }
 
 .restore {
-  height: 32px;
+  height: 28px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -372,7 +383,7 @@
 
 .backorder {
   display: inline-block;
-  margin-left: 8px;
+  margin-left: 0;
   padding: 2px 7px;
   border-radius: 999px;
   background: rgba(245, 158, 11, 0.16);
@@ -407,8 +418,8 @@
 
 .paymentSelect {
   width: auto;
-  min-width: 132px;
-  padding: 6px 26px 6px 10px;
+  min-width: 104px;
+  padding: 5px 20px 5px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
   background-color: var(--color-surface-2);
@@ -420,7 +431,7 @@
   appearance: none;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%239a9a9a' stroke-width='1.8'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 9px center;
+  background-position: right 7px center;
 }
 
 .paymentSelect.cash {
@@ -441,8 +452,8 @@
 /* --- WhatsApp ------------------------------------------------------------------ */
 
 .whatsapp {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -512,7 +523,7 @@
 
 .partial {
   display: inline-block;
-  margin-left: 8px;
+  margin-left: 0;
   padding: 2px 7px;
   border-radius: 999px;
   background: rgba(35, 165, 90, 0.16);
@@ -527,8 +538,8 @@
 
 
 .edit {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
